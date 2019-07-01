@@ -18,5 +18,6 @@
 #include <iostream>
 #include <filesystem>
 #include <chrono>
+#include <exception>
 
 #endif //PCH_H
