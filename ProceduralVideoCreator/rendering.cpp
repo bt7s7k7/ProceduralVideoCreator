@@ -5,8 +5,11 @@
 namespace rendering {
 
 	std::array<RenderJob, MAX_RENDER_JOBS> renderJobs;
+	/*
+		Mutex for access to job flags and job array
+	*/
 	std::mutex renderJobsMutex;
-	/* 
+	/*
 		This value is checked by all thrads every iteration
 		If set to true all threads will return
 	*/
@@ -31,7 +34,7 @@ namespace rendering {
 		using the assign operator with a defaultly constructed
 		job.
 	*/
-	RenderJob* tryPushJob(RenderJob& targetJob) {
+	RenderJob* tryPushJob(RenderJob&& targetJob) {
 
 		std::lock_guard<std::mutex> guard(renderJobsMutex);
 		for (auto& job : renderJobs) {
@@ -46,43 +49,46 @@ namespace rendering {
 	}
 
 	void threadFunction(const char* threadName) {
-		spdlog::info("Thread {} started", threadName);
+		spdlog::info("{} started", threadName);
 		while (!shouldQuit) {
 			RenderJob* currJob = nullptr;
-			spdlog::debug("Thread {} finding job...", threadName);
+			spdlog::debug("{} finding job...", threadName);
 			{
 				std::lock_guard<std::mutex> guard(renderJobsMutex);
 				for (auto& job : renderJobs) {
 					if (!job.free && !job.working) {
 						job.working = true;
-						spdlog::debug("Thread {} found job {}", threadName, (std::size_t) & job);
+						spdlog::debug("{} found job {}", threadName, (std::size_t) & job);
 						currJob = &job;
 					}
 				}
 			}
 
 			if (currJob == nullptr) {
-				spdlog::debug("Thread {} didn't find job, waiting for notification...", threadName);
+				spdlog::debug("{} didn't find job, waiting for notification...", threadName);
 				std::unique_lock<std::mutex> guard(renderJobsMutex);
 				jobNotification.wait(guard);
-				spdlog::debug("Thread {} received notification!", threadName);
+				spdlog::debug("{} received notification!", threadName);
 			} else {
+
+				//SDL_FillRect(currJob->surface.get(), nullptr, SDL_MapRGB(currJob->surface->format, 255, 255, 0));
+
 				std::unique_lock<std::mutex>(renderJobsMutex);
 				currJob->finished = true;
-				spdlog::debug("Thread {} finished job {}", threadName, (std::size_t) currJob);
+				spdlog::debug("{} finished job {}", threadName, (std::size_t) currJob);
 			}
 
 
 		}
-		spdlog::info("Thread {} quit", threadName);
+		spdlog::info("{} quit", threadName);
 	}
 
 	void setupThreadSwarm() {
 		spdlog::info("Launching thread swarm...");
-		threads.emplace_back(threadFunction, "Alpha");
-		threads.emplace_back(threadFunction, "Beta");
-		threads.emplace_back(threadFunction, "Gamma");
-		threads.emplace_back(threadFunction, "Delta");
+		threads.emplace_back(threadFunction, "[Alpha]");
+		threads.emplace_back(threadFunction, "<Betta>");
+		threads.emplace_back(threadFunction, "{Gamma}");
+		threads.emplace_back(threadFunction, ":Delta:");
 	}
 
 	void endThreadSwarm() {

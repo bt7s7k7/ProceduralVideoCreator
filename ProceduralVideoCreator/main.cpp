@@ -16,6 +16,7 @@ int main(int argc, char** args) try {
 		(FILE_ARG_DEFINITION, FILE_ARG_DESC, cxxopts::value<std::string>())
 		(NOHOTSWAP_ARG_DEFINITION, NOHOTSWAP_ARG_DESC)
 		(DEBUG_ARG_DEFINITION, DEBUG_ARG_DESC)
+		(SCALE_ARG_DEFINITION, SCALE_ARG_DESC, cxxopts::value<int>()->default_value("2"))
 		;
 
 	auto parsed = options.parse(argc, args);

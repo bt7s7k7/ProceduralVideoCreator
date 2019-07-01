@@ -13,6 +13,11 @@ inline std::filesystem::path filePath;
 	missing or using --cold
 */
 inline bool ignoreChanges;
+inline int projectW;
+inline int projectH;
+inline int previewScale;
+
+
 
 /*
 	This window should contain all controlls, including the time slider,
