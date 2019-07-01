@@ -173,9 +173,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="constants.h" />
+    <ClInclude Include="DestroyerType.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="kaguya.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="rendering.h" />
     <ClInclude Include="SDLHelper.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

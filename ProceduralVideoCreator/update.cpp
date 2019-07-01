@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "constants.h"
 #include "globals.h"
+#include "rendering.h"
 
 std::filesystem::file_time_type fileLastModified;
 
@@ -8,6 +9,7 @@ void loadLua(const std::filesystem::path& filePath, std::filesystem::file_time_t
 
 bool updateLoop() {
 	loadLua(filePath, fileLastModified);
+	rendering::setupThreadSwarm();
 	spdlog::info("Event loop started");
 	while (true) {
 		SDL_Event event;
@@ -25,6 +27,7 @@ end:
 	sliderWindowRenderer.reset();
 	sliderWindow.reset();
 	previewWindow.reset();
+	rendering::endThreadSwarm();
 
 	return true;
 }

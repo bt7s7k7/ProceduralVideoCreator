@@ -13,8 +13,9 @@ int main(int argc, char** args) try {
 
 	
 	options.add_options()
-		(FILE_ARG_DEFINITION, FILE_ARG_DESC, cxxopts::value<std::string>()),
+		(FILE_ARG_DEFINITION, FILE_ARG_DESC, cxxopts::value<std::string>())
 		(NOHOTSWAP_ARG_DEFINITION, NOHOTSWAP_ARG_DESC)
+		(DEBUG_ARG_DEFINITION, DEBUG_ARG_DESC)
 		;
 
 	auto parsed = options.parse(argc, args);

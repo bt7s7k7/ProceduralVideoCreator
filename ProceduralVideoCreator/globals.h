@@ -1,15 +1,9 @@
 #include "pch.h"
 #include "SDLHelper.h"
+#include "DestroyerType.h"
 
 inline std::filesystem::path filePath;
 inline bool ignoreChanges;
-
-template <typename T, void (*DESTROYER)(T*)>
-struct DestroyerType {
-	void operator()(T * ptr) {
-		DESTROYER(ptr);
-	}
-};
 
 inline std::unique_ptr<SDL_Window, DestroyerType<SDL_Window, SDL_DestroyWindow>> sliderWindow;
 inline std::unique_ptr<SDL_Window, DestroyerType<SDL_Window, SDL_DestroyWindow>> previewWindow;

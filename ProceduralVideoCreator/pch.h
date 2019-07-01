@@ -20,5 +20,10 @@
 #include <chrono>
 #include <exception>
 #include <memory>
+#include <atomic>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <new>
 
 #endif //PCH_H

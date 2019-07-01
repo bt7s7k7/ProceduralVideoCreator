@@ -50,5 +50,11 @@
     <ClInclude Include="SDLHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="rendering.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DestroyerType.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
