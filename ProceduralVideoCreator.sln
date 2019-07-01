@@ -5,6 +5,11 @@ VisualStudioVersion = 16.0.29021.104
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProceduralVideoCreator", "ProceduralVideoCreator\ProceduralVideoCreator.vcxproj", "{F13029D1-ED0D-4010-927D-AB4D9EEA56BF}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D2A128EE-5A80-44B4-9D9A-C4D111C82252}"
+	ProjectSection(SolutionItems) = preProject
+		ExampleScripts\test.lua = ExampleScripts\test.lua
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
