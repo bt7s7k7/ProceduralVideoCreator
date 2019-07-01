@@ -9,4 +9,11 @@
 
 // add headers that you want to pre-compile here
 
+#include <SDL2/SDL.h>
+#undef main
+#include "kaguya.h"
+#include <spdlog/spdlog.h>
+
+#include <iostream>
+
 #endif //PCH_H
