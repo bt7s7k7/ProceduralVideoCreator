@@ -1,1 +1,1 @@
-print("asdflkadjfklasfja")
+log("Test log from LUA")
