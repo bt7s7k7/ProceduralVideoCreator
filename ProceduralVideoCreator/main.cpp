@@ -32,6 +32,7 @@ int main(int argc, char** args) try {
 	if (!updateLoop()) return 1;
 
 } catch (const std::exception& err) {
+	// Catching all errors and putting them to the log
 	spdlog::critical(err.what());
 	return 1;
 }

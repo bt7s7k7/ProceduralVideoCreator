@@ -5,17 +5,23 @@
 void createLuaBindings();
 
 bool setup(const cxxopts::ParseResult& result, const cxxopts::Options & options) {
+	// Test if arg --file is present
 	if (result.count(FILE_ARG_NAME) != 1) {
-		spdlog::error(options.help().c_str(), "Argument --file is missing");
+		spdlog::error(options.help().c_str(), "Argument --file is missing or duplicated");
 		return false;
 	}
 
+	// Put arg values into globals
 	filePath = result[FILE_ARG_NAME].as<std::string>();
 	ignoreChanges = result.count(NOHOTSWAP_ARG_NAME) > 0 || result[NOHOTSWAP_ARG_NAME].as<bool>();
+
+	// Set the desired log level
 	if (result.count(DEBUG_ARG_NAME) > 0 || result[DEBUG_ARG_NAME].as<bool>()) {
 		spdlog::info("Setting debug level to debug as per --debug");
 		spdlog::set_level(spdlog::level::debug);
 	}
+
+	// Test the provided file
 	try {
 		if (!std::filesystem::is_regular_file(filePath)) {
 			spdlog::error("Specified file is not a file");

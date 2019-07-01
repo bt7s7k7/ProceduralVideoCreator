@@ -1,8 +1,12 @@
 #pragma once
 
-template <typename T, void (*DESTROYER)(T*)>
+/*
+	This type executes the function D
+	on operator().
+*/
+template <typename T, void (*D)(T*)>
 struct DestroyerType {
 	void operator()(T* ptr) {
-		DESTROYER(ptr);
+		D(ptr);
 	}
 };
