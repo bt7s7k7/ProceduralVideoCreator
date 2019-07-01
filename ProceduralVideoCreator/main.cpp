@@ -4,7 +4,7 @@
 auto options = cxxopts::Options(PROGRAM_NAME, "{}\n");
 
 bool setup(const cxxopts::ParseResult& result, const cxxopts::Options& options);
-bool update();
+bool updateLoop();
 
 int main(int argc, char** args) {
 	spdlog::info("Starting {}...", PROGRAM_NAME);
@@ -20,6 +20,6 @@ int main(int argc, char** args) {
 
 	if (!setup(parsed, options)) return 1;
 
-	
+	if (!updateLoop()) return 1;
 
 }
