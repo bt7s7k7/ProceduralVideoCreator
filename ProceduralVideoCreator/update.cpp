@@ -8,9 +8,23 @@ void loadLua(const std::filesystem::path& filePath, std::filesystem::file_time_t
 
 bool updateLoop() {
 	loadLua(filePath, fileLastModified);
+	spdlog::info("Event loop started");
 	while (true) {
-
-		
-
+		SDL_Event event;
+		while (SDL_PollEvent(&event)) {
+			if (event.type == SDL_WINDOWEVENT) {
+				if (event.window.event == SDL_WINDOWEVENT_CLOSE) {
+					goto end;
+				}
+			}
+		}
 	}
+
+end:
+	spdlog::info("Update loop ended, cleaning up...");
+	sliderWindowRenderer.reset();
+	sliderWindow.reset();
+	previewWindow.reset();
+
+	return true;
 }

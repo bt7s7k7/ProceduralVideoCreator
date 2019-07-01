@@ -26,6 +26,17 @@ bool setup(const cxxopts::ParseResult& result, const cxxopts::Options & options)
 		return false;
 	}
 
+	spdlog::info("Creating Lua bindings...");
 	createLuaBindings();
+
+	spdlog::info("Creating SDL windows...");
+
+	sliderWindow.reset(handleSDLError(SDL_CreateWindow("Slider", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 700, 300, SDL_WINDOW_RESIZABLE)));
+	previewWindow.reset(handleSDLError(SDL_CreateWindow("Preview", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 700, 700, SDL_WINDOW_RESIZABLE)));
+
+	sliderWindowRenderer.reset(handleSDLError(SDL_CreateRenderer(&*sliderWindow, -1, SDL_RENDERER_ACCELERATED)));
+
+
+
 	return true;
 }

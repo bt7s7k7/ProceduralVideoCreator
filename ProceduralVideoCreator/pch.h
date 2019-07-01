@@ -19,5 +19,6 @@
 #include <filesystem>
 #include <chrono>
 #include <exception>
+#include <memory>
 
 #endif //PCH_H
