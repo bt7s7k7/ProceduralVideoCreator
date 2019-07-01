@@ -1,8 +1,9 @@
 #include "pch.h"
 #include <iostream>
+#include "kaguya.h"
 
 int main()
 {
-    std::cout << "Hello World!\n";
-
+    
+	
 }

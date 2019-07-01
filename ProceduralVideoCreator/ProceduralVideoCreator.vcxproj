@@ -160,6 +160,7 @@
     <ClCompile Include="ProceduralVideoCreator.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="kaguya.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
