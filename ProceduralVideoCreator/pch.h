@@ -13,6 +13,7 @@
 #undef main
 #include "kaguya.h"
 #include <spdlog/spdlog.h>
+#include <cxxopts.hpp>
 
 #include <iostream>
 
