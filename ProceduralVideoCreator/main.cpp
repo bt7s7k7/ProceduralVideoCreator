@@ -1,10 +1,9 @@
 #include "pch.h"
 #include "constants.h"
 
-std::filesystem::path filePath;
 auto options = cxxopts::Options(PROGRAM_NAME, "{}\n");
 
-bool setup(const cxxopts::ParseResult& result);
+bool setup(const cxxopts::ParseResult& result, const cxxopts::Options& options);
 bool update();
 
 int main(int argc, char** args) {
@@ -13,13 +12,14 @@ int main(int argc, char** args) {
 
 	
 	options.add_options()
-		(FILE_ARG_DEFINITION, FILE_ARG_DESC, cxxopts::value<std::string>())
+		(FILE_ARG_DEFINITION, FILE_ARG_DESC, cxxopts::value<std::string>()),
+		(NOHOTSWAP_ARG_DEFINITION, NOHOTSWAP_ARG_DESC)
 		;
 
 	auto parsed = options.parse(argc, args);
 
-	if (!setup(parsed)) return 1;
+	if (!setup(parsed, options)) return 1;
 
-	while (update()) {}
+	
 
 }

@@ -1,19 +1,17 @@
 #include "pch.h"
 #include "constants.h"
+#include "globals.h"
 
-extern std::filesystem::path filePath;
-extern cxxopts::Options options;
-
-void loadLua();
 void createLuaBindings();
 
-bool setup(const cxxopts::ParseResult& result) {
+bool setup(const cxxopts::ParseResult& result, const cxxopts::Options & options) {
 	if (result.count(FILE_ARG_NAME) != 1) {
 		spdlog::error(options.help().c_str(), "Argument --file is missing");
 		return false;
 	}
 
 	filePath = result[FILE_ARG_NAME].as<std::string>();
+	ignoreChanges = result.count(NOHOTSWAP_ARG_NAME) < 1 || !result[NOHOTSWAP_ARG_NAME].as<bool>();
 	try {
 		if (!std::filesystem::is_regular_file(filePath)) {
 			spdlog::error("Specified file is not a file");
@@ -29,7 +27,5 @@ bool setup(const cxxopts::ParseResult& result) {
 	}
 
 	createLuaBindings();
-
-	loadLua();
 	return true;
 }
