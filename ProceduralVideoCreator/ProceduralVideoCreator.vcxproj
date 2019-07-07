@@ -159,6 +159,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="font.cpp" />
     <ClCompile Include="lua.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -174,11 +175,21 @@
   <ItemGroup>
     <ClInclude Include="constants.h" />
     <ClInclude Include="DestroyerType.h" />
+    <ClInclude Include="font.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="kaguya.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="rendering.h" />
     <ClInclude Include="SDLHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="segoeui.ttf">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
+      <FileType>Document</FileType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+    </CopyFileToFolders>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

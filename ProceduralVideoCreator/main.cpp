@@ -8,8 +8,11 @@ bool setup(const cxxopts::ParseResult& result, const cxxopts::Options& options);
 bool updateLoop();
 
 int main(int argc, char** args) try {
+	spdlog::set_default_logger(spdlog::stdout_color_mt("main_logger"));
+
 	spdlog::info("Starting {}...", PROGRAM_NAME);
 	spdlog::info("by Branislav Trstensk`y");
+
 
 	
 	options.add_options()

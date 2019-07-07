@@ -2,6 +2,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "rendering.h"
+#include "font.h"
 
 std::filesystem::file_time_type fileLastModified;
 
@@ -24,6 +25,7 @@ bool updateLoop() {
 	projectH = 1080;
 	loadLua(filePath, fileLastModified);
 	rendering::setupThreadSwarm();
+	auto font = getOrLoadFont(16, "segoeui");
 
 	spdlog::info("Creating SDL windows...");
 
@@ -57,7 +59,7 @@ bool updateLoop() {
 				}
 			} catch (const std::filesystem::filesystem_error& err) {
 				spdlog::warn("Exception '{}' occured while reading specified file", err.what());
-				
+
 			}
 		}
 
@@ -84,6 +86,16 @@ bool updateLoop() {
 				*previewJob = std::move(RenderJob());
 				previewJob = nullptr;
 			}
+		}
+
+		{ // Render slider window controlls
+			auto renderer = sliderWindowRenderer.get();
+			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+			SDL_RenderFillRect(renderer, nullptr);
+
+			renderCopySurfaceAndFree(renderer, handleSDLError(TTF_RenderText_Blended(font, "Test", SDL_Color{ 255,255,255,255 })), 10, 10);
+
+			SDL_RenderPresent(renderer);
 		}
 	}
 

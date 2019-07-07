@@ -12,8 +12,11 @@
 #include <SDL2/SDL.h>
 #undef main
 #include "kaguya.h"
+#define SPDLOG_DISABLE_TID_CACHING 1
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <cxxopts.hpp>
+#include <SDL2/SDL_ttf.h>
 
 #include <iostream>
 #include <filesystem>
