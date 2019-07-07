@@ -1,1 +1,5 @@
-log("Test log from LUA")
+function func()
+	log("Log from lua")
+end
+
+func()  

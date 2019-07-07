@@ -27,4 +27,8 @@ void createLuaBindings() {
 		spdlog::info("[Lua] " + text);
 	});
 
+	luaState.setErrorHandler([](int statuscode, const char* message) ->void {
+		throw kaguya::LuaException(statuscode, std::string(message));
+	});
+
 }

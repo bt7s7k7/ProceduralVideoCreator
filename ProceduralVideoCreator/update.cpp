@@ -41,6 +41,26 @@ bool updateLoop() {
 	bool wantPreviewJob = true;
 
 	while (true) {
+
+		// Detecting file change
+		if (!ignoreChanges) {
+			try {
+				if (std::filesystem::last_write_time(filePath) > fileLastModified) {
+					try {
+						loadLua(filePath, fileLastModified);
+						spdlog::info("Reloaded specified file");
+						wantPreviewJob = true;
+					} catch (const kaguya::LuaException& err) {
+						spdlog::warn("Exception occured while executing specified file: \n{}", err.what());
+						fileLastModified = std::filesystem::last_write_time(filePath);
+					}
+				}
+			} catch (const std::filesystem::filesystem_error& err) {
+				spdlog::warn("Exception '{}' occured while reading specified file", err.what());
+				
+			}
+		}
+
 		SDL_Event event;
 		// Polling and reacting to SDL events
 		while (SDL_PollEvent(&event)) {
