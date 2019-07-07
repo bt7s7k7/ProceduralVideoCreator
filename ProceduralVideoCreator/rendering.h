@@ -19,11 +19,11 @@ struct RenderJob {
 
 	inline RenderJob() : free(true), finished(true), working(false), surface(), tasks(), scale(1) {};
 	inline RenderJob(int w, int h, int scale_, std::vector<RenderTask>&& tasks_) : free(false), finished(false), surface(handleSDLError(SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0))), tasks(std::move(tasks_)), working(false), scale(scale_) {}
-	inline RenderJob(RenderJob&& other) : free(other.free.load()), finished(other.free.load()), surface(std::move(other.surface)), tasks(std::move(other.tasks)), working(false), scale(1) {
+	inline RenderJob(RenderJob&& other) noexcept : free(other.free.load()), finished(other.free.load()), surface(std::move(other.surface)), tasks(std::move(other.tasks)), working(false), scale(1) {
 		other.finished = true;
-	}
+	} ;
 
-	inline RenderJob & operator=(RenderJob&& other) {
+	inline RenderJob & operator=(RenderJob&& other) noexcept {
 		this->~RenderJob();
 		new (this) RenderJob(std::move(other));
 		return *this;
