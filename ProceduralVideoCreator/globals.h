@@ -15,7 +15,8 @@ inline std::filesystem::path filePath;
 inline bool ignoreChanges;
 inline int projectW;
 inline int projectH;
-inline int previewScale;
+inline int maxPreviewSize;
+inline double previewScale;
 inline double projectLength;
 
 /*

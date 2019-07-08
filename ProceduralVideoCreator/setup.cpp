@@ -14,7 +14,7 @@ bool setup(const cxxopts::ParseResult& result, const cxxopts::Options & options)
 	// Put arg values into globals
 	filePath = result[FILE_ARG_NAME].as<std::string>();
 	ignoreChanges = result.count(NOHOTSWAP_ARG_NAME) > 0 || result[NOHOTSWAP_ARG_NAME].as<bool>();
-	previewScale = result[SCALE_ARG_NAME].as<int>();
+	maxPreviewSize = result[MAXS_ARG_NAME].as<int>();
 
 	// Set the desired log level
 	if (result.count(DEBUG_ARG_NAME) > 0 || result[DEBUG_ARG_NAME].as<bool>()) {

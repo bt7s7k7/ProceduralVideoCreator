@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "constants.h"
+#include "globals.h"
 
 /*
 	State of the Lua VM. Doesn't change
@@ -18,13 +19,23 @@ void loadLua(const std::filesystem::path& filePath, std::filesystem::file_time_t
 	spdlog::info("Loaded!");
 }
 
-/* 
+/*
 	Creates bindings in Lua to C++ functions.
 */
 void createLuaBindings() {
 	spdlog::info("Creating Lua bindings...");
 	luaState["log"].setFunction([](std::string text) ->void {
 		spdlog::info("[Lua] " + text);
+	});
+
+	luaState["setDimensions"].setFunction([](int w, int h)->void {
+		if (w < 100 || h < 100) {
+			luaState(R"(error("Dimensions too small, minimum is 100x100", 2))");
+			return;
+		}
+
+		projectW = w;
+		projectH = h;
 	});
 
 	luaState.setErrorHandler([](int statuscode, const char* message) ->void {

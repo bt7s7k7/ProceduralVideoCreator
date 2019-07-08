@@ -15,7 +15,7 @@ bool updatePreview(RenderJob*& previewJob, std::vector<RenderTask>&& tasks) {
 		previewJob = nullptr;
 	}
 
-	previewJob = rendering::tryPushJob(RenderJob(projectW, projectH, previewScale, std::move(tasks)));
+	previewJob = rendering::tryPushJob(RenderJob(projectW, projectH, maxPreviewSize, std::move(tasks)));
 
 	return previewJob != nullptr;
 }
@@ -24,16 +24,31 @@ bool updateLoop() {
 	projectW = 1980;
 	projectH = 1080;
 	projectLength = 5;
-	loadLua(filePath, fileLastModified);
+
+
 	rendering::setupThreadSwarm();
 	auto font = getOrLoadFont(16, "segoeui");
 
 	spdlog::info("Creating SDL windows...");
 
 	sliderWindow.reset(handleSDLError(SDL_CreateWindow("Slider", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, CONTROLS_PADDING + CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING), CONTROLS_PADDING + 2 * (CONTROLS_HEIGHT + CONTROLS_PADDING), 0)));
-	previewWindow.reset(handleSDLError(SDL_CreateWindow("Preview", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, projectW / previewScale, projectH / previewScale, 0)));
+	previewWindow.reset(handleSDLError(SDL_CreateWindow("Preview", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 10, 10, 0)));
 
 	sliderWindowRenderer.reset(handleSDLError(SDL_CreateRenderer(&*sliderWindow, -1, SDL_RENDERER_ACCELERATED)));
+
+	auto recalcPreviewScale = []() {
+		if (projectH > maxPreviewSize || projectW > maxPreviewSize) {
+			double got = std::max(projectH, projectW);
+			double need = maxPreviewSize;
+			previewScale = need / got;
+		} else {
+			previewScale = 1;
+		}
+
+		SDL_SetWindowSize(previewWindow.get(), static_cast<int>(projectW * previewScale), static_cast<int>(projectH * previewScale));
+	};
+
+	recalcPreviewScale();
 
 	spdlog::info("Event loop started");
 
@@ -68,6 +83,7 @@ bool updateLoop() {
 						loadLua(filePath, fileLastModified);
 						spdlog::info("Reloaded specified file");
 						wantPreviewJob = true;
+						recalcPreviewScale();
 					} catch (const kaguya::LuaException& err) {
 						spdlog::warn("Exception occured while executing specified file: \n{}", err.what());
 						fileLastModified = std::filesystem::last_write_time(filePath);
@@ -75,7 +91,6 @@ bool updateLoop() {
 				}
 			} catch (const std::filesystem::filesystem_error& err) {
 				spdlog::warn("Exception '{}' occured while reading specified file", err.what());
-
 			}
 		}
 

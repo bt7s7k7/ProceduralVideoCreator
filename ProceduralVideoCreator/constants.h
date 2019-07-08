@@ -15,9 +15,9 @@ constexpr char DEBUG_ARG_NAME[] = "debug";
 constexpr char DEBUG_ARG_DEFINITION[] = "d,debug";
 constexpr char DEBUG_ARG_DESC[] = "Increased logging verbosity level to debug";
 
-constexpr char SCALE_ARG_NAME[] = "scale";
-constexpr char SCALE_ARG_DEFINITION[] = "s,scale";
-constexpr char SCALE_ARG_DESC[] = "Scaling of the preview relative to desired output (If --scale=2 then width is --width/2)";
+constexpr char MAXS_ARG_NAME[] = "max_size";
+constexpr char MAXS_ARG_DEFINITION[] = "m,max_size";
+constexpr char MAXS_ARG_DESC[] = "Maximum size of preview";
 
 constexpr std::size_t MAX_RENDER_JOBS = 255;
 
