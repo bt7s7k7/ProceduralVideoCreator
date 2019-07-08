@@ -169,6 +169,7 @@
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="rendering.cpp" />
+    <ClCompile Include="renderTasks.cpp" />
     <ClCompile Include="setup.cpp" />
     <ClCompile Include="update.cpp" />
   </ItemGroup>

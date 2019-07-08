@@ -2,11 +2,8 @@
 #include "constants.h"
 #include "globals.h"
 
-/*
-	State of the Lua VM. Doesn't change
-	during the program runtime
-*/
-kaguya::State luaState;
+
+void setupLuaTasks(kaguya::State& state);
 
 /*
 	Runs the specified file in the luaState, thus updating it. It's called on the
@@ -15,6 +12,7 @@ kaguya::State luaState;
 void loadLua(const std::filesystem::path& filePath, std::filesystem::file_time_type& fileLastModified) {
 	spdlog::info("Loading script...");
 	fileLastModified = std::filesystem::last_write_time(filePath);
+	luaState("function update() end");
 	luaState.dofile(filePath.string());
 	spdlog::info("Loaded!");
 }
@@ -50,5 +48,8 @@ void createLuaBindings() {
 	luaState.setErrorHandler([](int statuscode, const char* message) ->void {
 		throw kaguya::LuaException(statuscode, std::string(message));
 	});
+
+	spdlog::info("Registering tasks...");
+	setupLuaTasks(luaState);
 
 }

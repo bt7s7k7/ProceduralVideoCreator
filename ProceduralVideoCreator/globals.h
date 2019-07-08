@@ -32,3 +32,9 @@ inline unique_window_ptr previewWindow;
 inline unique_renderer_ptr sliderWindowRenderer;
 
 inline std::filesystem::path exePath;
+
+/*
+	State of the Lua VM. Doesn't change
+	during the program runtime
+*/
+inline kaguya::State luaState;

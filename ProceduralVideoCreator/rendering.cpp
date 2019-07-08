@@ -44,11 +44,12 @@ namespace rendering {
 				return &job;
 			}
 		}
-
+		jobNotification.notify_all();
 		return nullptr;
 	}
 
 	void threadFunction(const char* threadName) {
+
 		spdlog::info("{} started", threadName);
 		while (!shouldQuit) {
 			RenderJob* currJob = nullptr;
@@ -70,11 +71,18 @@ namespace rendering {
 				jobNotification.wait(guard);
 				spdlog::debug("{} received notification!", threadName);
 			} else {
-
-				//SDL_FillRect(currJob->surface.get(), nullptr, SDL_MapRGB(currJob->surface->format, 255, 255, 0));
-
 				std::unique_lock<std::mutex>(renderJobsMutex);
-				currJob->finished = true;
+				//SDL_LockSurface(currJob->surface.get());
+				auto surface = currJob->surface.get();
+				for (auto& task : currJob->tasks) {
+					task->Render(surface, currJob->scale);
+					if (currJob->finished) break;
+				}
+				if (currJob->finished) {
+					currJob->Reset();
+				} else {
+					currJob->finished = true;
+				}
 				spdlog::debug("{} finished job {}", threadName, (std::size_t) currJob);
 			}
 

@@ -7,15 +7,16 @@
 std::filesystem::file_time_type fileLastModified;
 
 void loadLua(const std::filesystem::path& filePath, std::filesystem::file_time_type& fileLastModified);
+std::vector<std::unique_ptr<RenderTask>> updateLua(double time);
 
 
-bool updatePreview(RenderJob*& previewJob, std::vector<RenderTask>&& tasks) {
+bool updatePreview(RenderJob*& previewJob, std::vector<std::unique_ptr<RenderTask>>&& tasks) {
 	if (previewJob != nullptr) {
 		previewJob->finished = true;
 		previewJob = nullptr;
 	}
 
-	previewJob = rendering::tryPushJob(RenderJob(projectW, projectH, maxPreviewSize, std::move(tasks)));
+	previewJob = rendering::tryPushJob(RenderJob(projectW, projectH, previewScale, std::move(tasks)));
 
 	return previewJob != nullptr;
 }
@@ -53,6 +54,7 @@ bool updateLoop() {
 	RenderJob* previewJob = nullptr;
 	bool wantPreviewJob = true;
 	double time = 0;
+	double lastTime = 0;
 
 	struct buttonState_t {
 		bool over;
@@ -104,16 +106,16 @@ bool updateLoop() {
 		}
 		if (wantPreviewJob) {  // If we want a render job we get it
 			spdlog::debug("Requesting a render job for preview");
-			wantPreviewJob = !updatePreview(previewJob, {});
+			wantPreviewJob = !updatePreview(previewJob, updateLua(time));
+			if (wantPreviewJob) spdlog::debug("Failed to register update job");
 		}
 		if (previewJob) { // If we have a render job we test if it's done
 			std::lock_guard lock(rendering::renderJobsMutex); // Lock access fot job flags, specificaly .finished to prevent a race condition
-			spdlog::debug("Bliting rendered pixels to preview");
-			SDL_BlitSurface(previewJob->surface.get(), nullptr, SDL_GetWindowSurface(previewWindow.get()), nullptr);
+			SDL_BlitSurface(previewJob->surface.get(), nullptr, SDL_GetWindowSurface(previewWindow.get()), nullptr); // Blit finished pixels to preview
 			SDL_UpdateWindowSurface(previewWindow.get());
 			if (previewJob->finished) { // If done then we free it and forget about it
 				spdlog::debug("Preview job finished, freeing");
-				*previewJob = std::move(RenderJob());
+				previewJob->Reset();
 				previewJob = nullptr;
 			}
 		}
@@ -159,6 +161,8 @@ bool updateLoop() {
 				if (mouseX >= CONTROLS_PADDING && mouseX < CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING) && mouseY >= CONTROLS_PADDING * 2 + CONTROLS_HEIGHT && mouseY < (CONTROLS_PADDING + CONTROLS_HEIGHT) * 2 && (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0) {
 					double frac = (double(mouseX) - CONTROLS_PADDING) / (double(CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING);
 					time = frac * projectLength;
+					if (time != lastTime) wantPreviewJob = true;
+					lastTime = time;
 				}
 
 				fillRect(CONTROLS_PADDING, CONTROLS_PADDING * 2 + CONTROLS_HEIGHT + CONTROLS_HEIGHT / 2 - SLIDER_LINE_WIDTH / 2, (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING, SLIDER_LINE_WIDTH);

@@ -1,8 +1,5 @@
-function func()
-	log("Log from lua")
+function update(time)
+	log(time)
 end
- 
-func()  
 
-setDimensions(100,100)
-setLength(8)
+	
