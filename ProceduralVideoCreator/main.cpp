@@ -35,6 +35,6 @@ int main(int argc, char** args) try {
 
 } catch (const std::exception& err) {
 	// Catching all errors and putting them to the log
-	spdlog::critical("[Abort] " + std::string(err.what()));
+	spdlog::critical("[Abort] " + std::string(err.what()) + "\n// For anyone debugging, this error was logged from main catch");
 	throw; // Rethrow the error for debugger
 }
