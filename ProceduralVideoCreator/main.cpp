@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "constants.h"
 #include "SDLHelper.h"
+#include "globals.h"
 
 auto options = cxxopts::Options(PROGRAM_NAME, "{}\n");
 
@@ -10,6 +11,8 @@ bool updateLoop();
 int main(int argc, char** args) try {
 	spdlog::info("Starting {}...", PROGRAM_NAME);
 	spdlog::info("by Branislav Trstensk`y");
+
+	exePath = args[0];
 
 	
 	options.add_options()
@@ -30,6 +33,8 @@ int main(int argc, char** args) try {
 	});
 
 	if (!setup(parsed, options)) return 1;
+
+	spdlog::debug("Executable path: {}", exePath.string());
 
 	if (!updateLoop()) return 1;
 
