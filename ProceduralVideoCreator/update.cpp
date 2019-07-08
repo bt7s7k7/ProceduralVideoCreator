@@ -21,11 +21,6 @@ bool updatePreview(RenderJob*& previewJob, std::vector<RenderTask>&& tasks) {
 }
 
 bool updateLoop() {
-	projectW = 1980;
-	projectH = 1080;
-	projectLength = 5;
-
-
 	rendering::setupThreadSwarm();
 	auto font = getOrLoadFont(16, "segoeui");
 
@@ -80,10 +75,14 @@ bool updateLoop() {
 			try {
 				if (std::filesystem::last_write_time(filePath) > fileLastModified) {
 					try {
+						projectW = 1980;
+						projectH = 1080;
+						projectLength = 5;
 						loadLua(filePath, fileLastModified);
 						spdlog::info("Reloaded specified file");
 						wantPreviewJob = true;
 						recalcPreviewScale();
+						if (time > projectLength) time = projectLength;
 					} catch (const kaguya::LuaException& err) {
 						spdlog::warn("Exception occured while executing specified file: \n{}", err.what());
 						fileLastModified = std::filesystem::last_write_time(filePath);

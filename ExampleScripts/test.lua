@@ -5,3 +5,4 @@ end
 func()  
 
 setDimensions(100,100)
+setLength(8)

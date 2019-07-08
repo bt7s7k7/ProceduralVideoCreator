@@ -38,6 +38,15 @@ void createLuaBindings() {
 		projectH = h;
 	});
 
+	luaState["setLength"].setFunction([](int length) {
+		if (length < 1) {
+			luaState(R"(error("Project length too small, minimus is 1s"))");
+			return;
+		}
+
+		projectLength = length;
+	});
+
 	luaState.setErrorHandler([](int statuscode, const char* message) ->void {
 		throw kaguya::LuaException(statuscode, std::string(message));
 	});
