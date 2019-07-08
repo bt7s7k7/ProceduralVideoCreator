@@ -125,8 +125,8 @@ bool updateLoop() {
 				auto state = SDL_GetMouseState(&x, &y);
 
 				bool over = x >= pos && x < pos + CONTROLS_WIDTH && y >= CONTROLS_PADDING && y < CONTROLS_PADDING + CONTROLS_HEIGHT;
-				bool active = over && (state & SDL_BUTTON(SDL_BUTTON_LEFT) > 0);
-				bool pressed = active && (lastMouseState & SDL_BUTTON(SDL_BUTTON_LEFT) == 0);
+				bool active = over && (state & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0;
+				bool pressed = active && (lastMouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) == 0;
 
 
 				fillRect(pos, CONTROLS_PADDING, CONTROLS_WIDTH, CONTROLS_HEIGHT, active && !ignoreMouse ? CONTROL_ACTIVE_COLOR : (over && !ignoreMouse ? CONTROL_HOVER_COLOR : CONTROL_IDLE_COLOR));

@@ -25,6 +25,8 @@ T* handleSDLError(T* pointer) {
 struct ConvertedTextureData {
 	unique_texture_ptr texture;
 	SDL_Rect rect;
+
+	ConvertedTextureData() : texture(nullptr), rect{ 0,0,0,0 } {};
 };
 
 /*
