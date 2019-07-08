@@ -16,6 +16,7 @@ inline bool ignoreChanges;
 inline int projectW;
 inline int projectH;
 inline int previewScale;
+inline double projectLength;
 
 /*
 	This window should contain all controlls, including the time slider,

@@ -29,7 +29,7 @@ bool updateLoop() {
 
 	spdlog::info("Creating SDL windows...");
 
-	sliderWindow.reset(handleSDLError(SDL_CreateWindow("Slider", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 700, 300, 0)));
+	sliderWindow.reset(handleSDLError(SDL_CreateWindow("Slider", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, CONTROLS_PADDING + CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING), CONTROLS_PADDING + 2 * (CONTROLS_HEIGHT + CONTROLS_PADDING), 0)));
 	previewWindow.reset(handleSDLError(SDL_CreateWindow("Preview", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, projectW / previewScale, projectH / previewScale, 0)));
 
 	sliderWindowRenderer.reset(handleSDLError(SDL_CreateRenderer(&*sliderWindow, -1, SDL_RENDERER_ACCELERATED)));
@@ -41,6 +41,21 @@ bool updateLoop() {
 	*/
 	RenderJob* previewJob = nullptr;
 	bool wantPreviewJob = true;
+	double time = 0;
+
+	struct buttonState_t {
+		bool over;
+		bool pressed;
+		bool wasPressed;
+
+		inline SDL_Color GetColor() {
+			return pressed ? CONTROL_ACTIVE_COLOR : (over ? CONTROL_HOVER_COLOR : CONTROL_IDLE_COLOR);
+		};
+
+		buttonState_t() : over(false), pressed(false), wasPressed(false) {};
+	};
+
+	Uint32 lastMouseState = SDL_GetMouseState(nullptr, nullptr);
 
 	while (true) {
 
@@ -90,10 +105,44 @@ bool updateLoop() {
 
 		{ // Render slider window controlls
 			auto renderer = sliderWindowRenderer.get();
+
 			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 			SDL_RenderFillRect(renderer, nullptr);
 
-			renderCopySurfaceAndFree(renderer, handleSDLError(TTF_RenderText_Blended(font, "Test", SDL_Color{ 255,255,255,255 })), 10, 10);
+			auto renderText = [&font, &renderer](const std::string& text, int x, int y, SDL_Color color = CONTROL_LABEL_COLOR) {
+				renderCopySurfaceAndFree(renderer, handleSDLError(TTF_RenderText_Blended(font, text.data(), color)), x, y);
+			};
+
+			auto fillRect = [&renderer](int x, int y, int w, int h, SDL_Color color = CONTROL_IDLE_COLOR) {
+				SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+				SDL_Rect rect{ x,y,w,h };
+				SDL_RenderFillRect(renderer, &rect);
+			};
+
+			auto drawControll = [&renderer, &font, pos = CONTROLS_PADDING, &fillRect, &renderText, &lastMouseState](const char* text, bool ignoreMouse = false) mutable {
+				int x, y;
+
+				auto state = SDL_GetMouseState(&x, &y);
+
+				bool over = x >= pos && x < pos + CONTROLS_WIDTH && y >= CONTROLS_PADDING && y < CONTROLS_PADDING + CONTROLS_HEIGHT;
+				bool active = over && (state & SDL_BUTTON(SDL_BUTTON_LEFT) > 0);
+				bool pressed = active && (lastMouseState & SDL_BUTTON(SDL_BUTTON_LEFT) == 0);
+
+
+				fillRect(pos, CONTROLS_PADDING, CONTROLS_WIDTH, CONTROLS_HEIGHT, active && !ignoreMouse ? CONTROL_ACTIVE_COLOR : (over && !ignoreMouse ? CONTROL_HOVER_COLOR : CONTROL_IDLE_COLOR));
+				renderText(text, pos + CONTROLS_PADDING, 0);
+				pos += CONTROLS_PADDING + CONTROLS_WIDTH;
+
+				return pressed;
+			};
+
+			drawControll(LABEL_TIME, true);
+			drawControll(LABEL_PAUSEPLAY);
+			drawControll(LABEL_RENDERFRAME);
+			drawControll(LABEL_RENDER_PROJECT);
+			drawControll(LABEL_FORCERELOAD);
+
+			lastMouseState = SDL_GetMouseState(nullptr, nullptr);
 
 			SDL_RenderPresent(renderer);
 		}
