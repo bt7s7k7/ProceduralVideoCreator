@@ -17,6 +17,8 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <cxxopts.hpp>
 #include <SDL2/SDL_ttf.h>
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <iostream>
 #include <filesystem>

@@ -23,6 +23,7 @@ bool updatePreview(RenderJob*& previewJob, std::vector<RenderTask>&& tasks) {
 bool updateLoop() {
 	projectW = 1980;
 	projectH = 1080;
+	projectLength = 5;
 	loadLua(filePath, fileLastModified);
 	rendering::setupThreadSwarm();
 	auto font = getOrLoadFont(16, "segoeui");
@@ -118,14 +119,12 @@ bool updateLoop() {
 				SDL_Rect rect{ x,y,w,h };
 				SDL_RenderFillRect(renderer, &rect);
 			};
+			int mouseX, mouseY;
+			auto mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+			auto drawControll = [&renderer, &font, pos = CONTROLS_PADDING, &fillRect, &renderText, &lastMouseState, &mouseState, &mouseX, &mouseY](const char* text, bool ignoreMouse = false) mutable {
 
-			auto drawControll = [&renderer, &font, pos = CONTROLS_PADDING, &fillRect, &renderText, &lastMouseState](const char* text, bool ignoreMouse = false) mutable {
-				int x, y;
-
-				auto state = SDL_GetMouseState(&x, &y);
-
-				bool over = x >= pos && x < pos + CONTROLS_WIDTH && y >= CONTROLS_PADDING && y < CONTROLS_PADDING + CONTROLS_HEIGHT;
-				bool active = over && (state & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0;
+				bool over = mouseX >= pos && mouseX < pos + CONTROLS_WIDTH && mouseY >= CONTROLS_PADDING && mouseY < CONTROLS_PADDING + CONTROLS_HEIGHT;
+				bool active = over && (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0;
 				bool pressed = active && (lastMouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) == 0;
 
 
@@ -136,11 +135,21 @@ bool updateLoop() {
 				return pressed;
 			};
 
-			drawControll(LABEL_TIME, true);
+			drawControll(fmt::format(LABEL_TIME, time, projectLength).data(), true);
 			drawControll(LABEL_PAUSEPLAY);
 			drawControll(LABEL_RENDERFRAME);
 			drawControll(LABEL_RENDER_PROJECT);
 			drawControll(LABEL_FORCERELOAD);
+
+			{ // Slider controll
+				if (mouseX >= CONTROLS_PADDING && mouseX < CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING) && mouseY >= CONTROLS_PADDING * 2 + CONTROLS_HEIGHT && mouseY < (CONTROLS_PADDING + CONTROLS_HEIGHT) * 2 && (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0) {
+					double frac = (double(mouseX) - CONTROLS_PADDING) / (double(CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING);
+					time = frac * projectLength;
+				}
+
+				fillRect(CONTROLS_PADDING, CONTROLS_PADDING * 2 + CONTROLS_HEIGHT + CONTROLS_HEIGHT / 2 - SLIDER_LINE_WIDTH / 2, (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING, SLIDER_LINE_WIDTH);
+				fillRect(static_cast<int>(CONTROLS_PADDING + ((time / projectLength) * (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING)), CONTROLS_PADDING * 2 + CONTROLS_HEIGHT, SLIDER_HANDLE_WIDTH, CONTROLS_HEIGHT, CONTROL_HOVER_COLOR);
+			}
 
 			lastMouseState = SDL_GetMouseState(nullptr, nullptr);
 
