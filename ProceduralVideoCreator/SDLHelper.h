@@ -9,7 +9,7 @@ public:
 
 inline void handleSDLError(int errorCode) {
 	if (errorCode == -1) {
-		throw SDLException(SDL_GetError());
+		throw SDLException("[SDL] " + std::string(SDL_GetError()));
 	}
 }
 
@@ -18,7 +18,7 @@ T* handleSDLError(T* pointer) {
 	if (pointer != nullptr) {
 		return pointer;
 	} else {
-		throw SDLException(SDL_GetError());
+		throw SDLException("[SDL] " + std::string(SDL_GetError()));
 	}
 }
 

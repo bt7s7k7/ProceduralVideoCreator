@@ -8,11 +8,8 @@ bool setup(const cxxopts::ParseResult& result, const cxxopts::Options& options);
 bool updateLoop();
 
 int main(int argc, char** args) try {
-	spdlog::set_default_logger(spdlog::stdout_color_mt("main_logger"));
-
 	spdlog::info("Starting {}...", PROGRAM_NAME);
 	spdlog::info("by Branislav Trstensk`y");
-
 
 	
 	options.add_options()
@@ -26,6 +23,7 @@ int main(int argc, char** args) try {
 
 	spdlog::info("Initializing SDL...");
 	handleSDLError(SDL_Init(SDL_INIT_VIDEO));
+	handleSDLError(TTF_Init());
 
 	std::atexit([]() {
 		SDL_Quit();
@@ -37,6 +35,6 @@ int main(int argc, char** args) try {
 
 } catch (const std::exception& err) {
 	// Catching all errors and putting them to the log
-	spdlog::critical(err.what());
-	return 1;
+	spdlog::critical("[Abort] " + std::string(err.what()));
+	throw; // Rethrow the error for debugger
 }
