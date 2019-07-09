@@ -30,5 +30,6 @@
 #include <thread>
 #include <condition_variable>
 #include <new>
+#include <queue>
 
 #endif //PCH_H

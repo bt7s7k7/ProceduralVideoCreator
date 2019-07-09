@@ -4,7 +4,7 @@
 
 namespace rendering {
 
-	std::array<RenderJob, MAX_RENDER_JOBS> renderJobs;
+	std::queue<std::shared_ptr<RenderJob>> renderJobs;
 	/*
 		Mutex for access to job flags and job array
 	*/
@@ -34,34 +34,25 @@ namespace rendering {
 		using the assign operator with a defaultly constructed
 		job.
 	*/
-	RenderJob* tryPushJob(RenderJob&& targetJob) {
-
+	void tryPushJob(std::shared_ptr<RenderJob> targetJob) {
 		std::lock_guard<std::mutex> guard(renderJobsMutex);
-		for (auto& job : renderJobs) {
-			if (job.free) {
-				job = std::move(targetJob);
-				jobNotification.notify_one();
-				return &job;
-			}
-		}
-		jobNotification.notify_all();
-		return nullptr;
+		renderJobs.push(targetJob);
+		jobNotification.notify_one();
+		spdlog::debug("Pushed job, now {} jobs in queue", renderJobs.size());
 	}
 
 	void threadFunction(const char* threadName) {
 
 		spdlog::info("{} started", threadName);
 		while (!shouldQuit) {
-			RenderJob* currJob = nullptr;
+			std::shared_ptr<RenderJob> currJob = nullptr;
 			spdlog::debug("{} finding job...", threadName);
 			{
 				std::lock_guard<std::mutex> guard(renderJobsMutex);
-				for (auto& job : renderJobs) {
-					if (!job.free && !job.working) {
-						job.working = true;
-						spdlog::debug("{} found job {}", threadName, (std::size_t) & job);
-						currJob = &job;
-					}
+				if (renderJobs.size() > 0) {
+					currJob = renderJobs.front();
+					renderJobs.pop();
+					spdlog::debug("{} found job {}", threadName, (std::size_t) currJob.get());
 				}
 			}
 
@@ -76,14 +67,16 @@ namespace rendering {
 				auto surface = currJob->surface.get();
 				for (auto& task : currJob->tasks) {
 					task->Render(surface, currJob->scale);
-					if (currJob->finished) break;
+					std::lock_guard<std::mutex> l(rendering::renderJobsMutex);
+					if (currJob->canceled) break;
 				}
-				if (currJob->finished) {
-					currJob->Reset();
+				std::lock_guard<std::mutex> l(rendering::renderJobsMutex);
+				if (currJob->canceled) {
+					spdlog::debug("{}'s job {} was cancelled", threadName, (std::size_t) currJob.get());
 				} else {
+					spdlog::debug("{} finished job {}", threadName, (std::size_t) currJob.get());
 					currJob->finished = true;
 				}
-				spdlog::debug("{} finished job {}", threadName, (std::size_t) currJob);
 			}
 
 
