@@ -107,7 +107,12 @@ bool updateLoop() {
 		if (wantPreviewJob) {  // If we want a render job we get it
 			spdlog::debug("Requesting a render job for preview");
 			wantPreviewJob = false;
-			updatePreview(previewJob, updateLua(time));
+			try {
+				updatePreview(previewJob, updateLua(time));
+			} catch (const kaguya::LuaException& err) {
+				spdlog::warn("Exception occured while executing update: \n{}", err.what());
+				luaState["update"].setFunction([]() {});
+			}
 		}
 		if (previewJob) { // If we have a render job we test if it's done
 			SDL_BlitSurface(previewJob->surface.get(), nullptr, SDL_GetWindowSurface(previewWindow.get()), nullptr); // Blit finished pixels to preview

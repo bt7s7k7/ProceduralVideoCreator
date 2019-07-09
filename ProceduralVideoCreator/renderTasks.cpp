@@ -3,7 +3,7 @@
 #include "globals.h"
 #include "constants.h"
 
-std::vector<std::unique_ptr<RenderTask>>* _tempTasks = nullptr;
+std::vector<std::unique_ptr<RenderTask>>* tempTasks = nullptr;
 
 struct Vector {
 	coordinate x, y;
@@ -72,13 +72,26 @@ std::unique_ptr<GenericTask<T>> makeGenericTask(T func) {
 std::vector<std::unique_ptr<RenderTask>> updateLua(double time) {
 	std::vector<std::unique_ptr<RenderTask>> ret;
 
-	_tempTasks = &ret;
+	tempTasks = &ret;
 
 	if (luaState["update"].isType<kaguya::LuaFunction>()) luaState["update"](time);
 
-	_tempTasks = nullptr;
+	tempTasks = nullptr;
 
 	return std::move(ret);
+}
+
+std::tuple<int, int, int> limitColors(double dr, double dg, double db) {
+
+	int r = static_cast<int>(std::floor(dr));
+	int g = static_cast<int>(std::floor(dg));
+	int b = static_cast<int>(std::floor(db));
+
+	r = std::min(255, std::max(r, 0));
+	g = std::min(255, std::max(g, 0));
+	b = std::min(255, std::max(b, 0));
+
+	return { r,g,b };
 }
 
 void setupLuaTasks(kaguya::State& state) {
@@ -98,7 +111,7 @@ void setupLuaTasks(kaguya::State& state) {
 	state["tasks"] = kaguya::NewTable();
 
 	auto testVoid = [&state]() {
-		if (_tempTasks == nullptr) {
+		if (tempTasks == nullptr) {
 			state("error('Task can only be called from update', 2)");
 			return true;
 		} else {
@@ -108,13 +121,25 @@ void setupLuaTasks(kaguya::State& state) {
 
 	state["tasks"]["test"].setFunction([&testVoid]() {
 		if (testVoid()) return;
-		_tempTasks->push_back(makeGenericTask([](SDL_Surface* surface, double scale) {
+		tempTasks->push_back(makeGenericTask([](SDL_Surface* surface, double scale) {
 			int w = surface->w, h = surface->h;
 			for (int x = 0; x < w; x++) {
 				for (int y = 0; y < h; y++) {
 					*(Uint32*)((Uint8*)surface->pixels + y * surface->pitch + x * 4) = rendering::mapRGBA(surface->format, x % 255, 0, 0);////0xffffffff;
 				}
 			}
+		}));
+	});
+
+	state["tasks"]["fill"].setFunction([&testVoid](double dr, double dg, double db) {
+		if (testVoid()) return;
+
+		//int r = 0, g = 0, b = 0;
+
+		auto [r, g, b] = limitColors(dr, dg, db);
+
+		tempTasks->push_back(makeGenericTask([r = r, g = g, b = b](SDL_Surface* surface, double scale) {
+			SDL_FillRect(surface, nullptr, SDL_MapRGB(surface->format, r, g, b));
 		}));
 	});
 }
