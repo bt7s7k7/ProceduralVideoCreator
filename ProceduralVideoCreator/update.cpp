@@ -55,6 +55,8 @@ bool updateLoop() {
 	double time = 0;
 	double lastTime = 0;
 	bool wasSliderDown = false;
+	bool plaing = false;
+	std::chrono::high_resolution_clock::time_point lastPlayFrame;
 
 	struct buttonState_t {
 		bool over;
@@ -156,7 +158,15 @@ bool updateLoop() {
 			};
 
 			drawControll(fmt::format(LABEL_TIME, time, projectLength).data(), true);
-			drawControll(LABEL_PAUSEPLAY);
+			if (drawControll(LABEL_PAUSEPLAY)) {
+				if (plaing) {
+					plaing = false;
+					wantPreviewJob = true;
+				} else {
+					plaing = true;
+					lastPlayFrame = std::chrono::high_resolution_clock::now();
+				}
+			}
 			drawControll(LABEL_RENDERFRAME);
 			drawControll(LABEL_RENDER_PROJECT);
 			drawControll(LABEL_FORCERELOAD);
@@ -179,6 +189,21 @@ bool updateLoop() {
 						wantPreviewJob = true;
 					}
 					wasSliderDown = false;
+				}
+
+				if (plaing) {
+					auto now = std::chrono::high_resolution_clock::now();
+					double elapsedTime = std::chrono::duration<double>((now - lastPlayFrame)).count();
+					lastPlayFrame = now;
+					time += elapsedTime;
+					if (time > projectLength) {
+						time = projectLength;
+						plaing = false;
+						wantPreviewJob = true;
+					}
+					if (!previewJob) {
+						wantPreviewJob = true;
+					}
 				}
 
 				fillRect(CONTROLS_PADDING, CONTROLS_PADDING * 2 + CONTROLS_HEIGHT + CONTROLS_HEIGHT / 2 - SLIDER_LINE_WIDTH / 2, (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING, SLIDER_LINE_WIDTH);
