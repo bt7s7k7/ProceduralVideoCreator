@@ -5,6 +5,11 @@
 
 std::vector<std::unique_ptr<RenderTask>>* tempTasks = nullptr;
 
+/*
+	Structure to store 2D coordinates,
+	also accesible from Lua but all 
+	functions are camel case
+*/
 struct Vector {
 	coordinate x, y;
 
@@ -48,6 +53,10 @@ struct Vector {
 
 };
 
+/*
+	This struct will execute the functor provided
+	during costruction on Render
+*/
 template <typename T>
 class GenericTask : public RenderTask {
 	T functor;
@@ -57,12 +66,17 @@ class GenericTask : public RenderTask {
 		return "TestTask";
 	}
 	virtual void Render(SDL_Surface* surface, double scale) override {
+		// Calling provided functor
 		functor(surface, scale);
 	}
 public:
 	GenericTask(T f) : functor(f) {};
 };
 
+/*
+	This function creates a GenericTask using the provided
+	functor and puts it inside a unique_ptr automaticaly.
+*/
 template<typename T>
 std::unique_ptr<GenericTask<T>> makeGenericTask(T func) {
 	auto task = new GenericTask(func);
@@ -81,11 +95,16 @@ std::vector<std::unique_ptr<RenderTask>> updateLua(double time) {
 	return std::move(ret);
 }
 
+/*
+	This functions multiplies all color values by 255, floors them and limits 
+	them 0...255 inclusive then returns [r, g, b]. Use capture:
+	auto [r, g, b] = limitColors(dr, dg, db);
+*/
 std::tuple<int, int, int> limitColors(double dr, double dg, double db) {
 
-	int r = static_cast<int>(std::floor(dr));
-	int g = static_cast<int>(std::floor(dg));
-	int b = static_cast<int>(std::floor(db));
+	int r = static_cast<int>(std::floor(dr * 255));
+	int g = static_cast<int>(std::floor(dg * 255));
+	int b = static_cast<int>(std::floor(db * 255));
 
 	r = std::min(255, std::max(r, 0));
 	g = std::min(255, std::max(g, 0));
@@ -96,6 +115,7 @@ std::tuple<int, int, int> limitColors(double dr, double dg, double db) {
 
 void setupLuaTasks(kaguya::State& state) {
 
+	// Creating bindings for Vector class inside Lua
 	state["Vector"].setClass(kaguya::UserdataMetatable<Vector>()
 		.setConstructors<Vector(double, double)>()
 		.addFunction("x", &Vector::X)
@@ -108,8 +128,12 @@ void setupLuaTasks(kaguya::State& state) {
 		.addStaticFunction("fromAngle", &Vector::FromAngle)
 	);
 
-	state["tasks"] = kaguya::NewTable();
+	state["tasks"] = kaguya::NewTable(); // Creating global table for all tasks
 
+	/*
+		Tests if tempTasks is void so you can push your task. Use:
+		if (testVoid()) return;
+	*/
 	auto testVoid = [&state]() {
 		if (tempTasks == nullptr) {
 			state("error('Task can only be called from update', 2)");
@@ -119,7 +143,7 @@ void setupLuaTasks(kaguya::State& state) {
 		}
 	};
 
-	state["tasks"]["test"].setFunction([&testVoid]() {
+	state["tasks"]["test"].setFunction([&testVoid]() { // Testing function, will probably be removed 
 		if (testVoid()) return;
 		tempTasks->push_back(makeGenericTask([](SDL_Surface* surface, double scale) {
 			int w = surface->w, h = surface->h;
@@ -131,6 +155,7 @@ void setupLuaTasks(kaguya::State& state) {
 		}));
 	});
 
+	// tasks.fill
 	state["tasks"]["fill"].setFunction([&testVoid](double dr, double dg, double db) {
 		if (testVoid()) return;
 		auto [r, g, b] = limitColors(dr, dg, db);
@@ -140,6 +165,7 @@ void setupLuaTasks(kaguya::State& state) {
 		}));
 	});
 
+	// tasks.rect
 	state["tasks"]["rect"].setFunction([&testVoid](Vector pos, Vector size, bool center, bool fill, double dr, double dg, double db) {
 		if (testVoid()) return;
 		auto [r, g, b] = limitColors(dr, dg, db);
@@ -170,9 +196,12 @@ void setupLuaTasks(kaguya::State& state) {
 
 	});
 
+	// tasks.circle
 	state["tasks"]["circle"].setFunction([&testVoid](Vector pos, coordinate radius, bool fill, double dr, double dg, double db) {
 		if (testVoid()) return;
 		auto [r, g, b] = limitColors(dr, dg, db);
+
+		if (radius < 1) return;
 
 		tempTasks->push_back(makeGenericTask([rr = r, g = g, b = b, pos, r_ = radius, fill](SDL_Surface* surface, double scale) {
 			int r = static_cast<int>(std::floor(r_ * scale));
@@ -203,28 +232,6 @@ void setupLuaTasks(kaguya::State& state) {
 				auto rectsPtr = rects.data();
 
 				while (x <= y) {
-					/*
-					if (!fill) {
-	//#define draw(x,y) *(Uint32*)((Uint8*)surface->pixels + y * surface->pitch + x * 4) = color
-						// draw the eight points
-						draw(cx + x, cy + y);
-						draw(cx + x, cy - y);
-						draw(cx - x, cy + y);
-						draw(cx - x, cy - y);
-						draw(cx + y, cy + x);
-						draw(cx + y, cy - x);
-						draw(cx - y, cy + x);
-						draw(cx - y, cy - x);
-	#undef draw
-					} else {
-	#define draw(x1,x2,y) {SDL_Rect rect{x1,y,x2-x1,1}; SDL_FillRect(surface, &rect, color); }
-						draw(cx - x, cx + x, cy - y);
-						draw(cx - y, cx + y, cy + x);
-						draw(cx - y, cx + y, cy - x);
-						draw(cx - x, cx + x, cy + y);
-	#undef draw
-					}*/
-
 					if (!fill) {
 						rectsPtr[0] = { cx + x, cy + y, 1, 1 };
 						rectsPtr[1] = { cx + x, cy - y, 1, 1 };
@@ -250,11 +257,8 @@ void setupLuaTasks(kaguya::State& state) {
 					if (sum <= y2) {
 						y--; y2 -= dy2; dy2 -= 2;
 					}
-				} /* while */
-
-
+				}
 			};
-
 			draw();
 		}));
 	});

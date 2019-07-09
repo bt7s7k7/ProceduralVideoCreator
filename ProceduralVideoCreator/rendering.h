@@ -19,41 +19,6 @@ struct RenderJob {
 
 	inline RenderJob() : canceled(true), finished(true), working(false), surface(), tasks(), scale(1) {};
 	inline RenderJob(int w, int h, double scale_, std::vector<std::unique_ptr<RenderTask>>&& tasks_) : canceled(false), finished(false), surface(handleSDLError(SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0))), tasks(std::move(tasks_)), working(false), scale(scale_) {}
-	/*inline RenderJob(RenderJob&& other) noexcept : canceled(other.canceled.load()), finished(other.canceled.load()), surface(std::move(other.surface)), tasks(std::move(other.tasks)), working(false), scale(1) {
-		other.canceled = true;
-		other.finished = true;
-		other.working = false;
-		other.surface.reset();
-		other.tasks.clear();
-	};
-
-	inline RenderJob& operator=(RenderJob&& other) noexcept {
-		canceled = other.canceled.load();
-		finished = other.finished.load();
-		working = other.working.load();
-
-		other.canceled = true;
-		other.finished = true;
-		other.working = false;
-
-		surface.reset();
-		surface = std::move(other.surface);
-		other.surface.reset();
-
-		tasks.clear();
-		tasks = std::move(other.tasks);
-		other.tasks.clear();
-
-		return *this;
-	};
-
-	inline void Reset() {
-		canceled = true;
-		finished = true;
-		working = false;
-		surface.reset();
-		tasks.clear();
-	};*/
 
 	RenderJob(const RenderJob&) = delete;
 };
