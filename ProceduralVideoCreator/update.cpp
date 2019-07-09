@@ -54,6 +54,7 @@ bool updateLoop() {
 	bool wantPreviewJob = true;
 	double time = 0;
 	double lastTime = 0;
+	bool wasSliderDown = false;
 
 	struct buttonState_t {
 		bool over;
@@ -164,8 +165,20 @@ bool updateLoop() {
 				if (mouseX >= CONTROLS_PADDING && mouseX < CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING) && mouseY >= CONTROLS_PADDING * 2 + CONTROLS_HEIGHT && mouseY < (CONTROLS_PADDING + CONTROLS_HEIGHT) * 2 && (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0) {
 					double frac = (double(mouseX) - CONTROLS_PADDING) / (double(CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING);
 					time = frac * projectLength;
-					if (time != lastTime) wantPreviewJob = true;
+					if (time != lastTime) {
+						if (!previewJob) {
+							wantPreviewJob = true;
+						}
+					}
+
+
+					wasSliderDown = true;
 					lastTime = time;
+				} else {
+					if (wasSliderDown) {
+						wantPreviewJob = true;
+					}
+					wasSliderDown = false;
 				}
 
 				fillRect(CONTROLS_PADDING, CONTROLS_PADDING * 2 + CONTROLS_HEIGHT + CONTROLS_HEIGHT / 2 - SLIDER_LINE_WIDTH / 2, (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING, SLIDER_LINE_WIDTH);
