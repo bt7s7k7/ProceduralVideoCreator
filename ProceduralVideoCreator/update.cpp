@@ -26,6 +26,7 @@ void updatePreview(std::shared_ptr<RenderJob>& previewJob, std::vector<std::uniq
 bool updateLoop() {
 	rendering::setupThreadSwarm();
 	auto font = getOrLoadFont(16, "segoeui"); // Loading font
+	std::unordered_map<std::string, unique_surface_ptr> cachedLabels;
 
 	spdlog::info("Creating SDL windows...");
 
@@ -168,8 +169,16 @@ bool updateLoop() {
 			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 			SDL_RenderFillRect(renderer, nullptr); 
 
-			auto renderText = [&font, &renderer](const std::string& text, int x, int y, SDL_Color color = CONTROL_LABEL_COLOR) {
-				renderCopySurfaceAndFree(renderer, handleSDLError(TTF_RenderText_Blended(font, text.data(), color)), x, y);
+			auto renderText = [&font, &renderer, &cachedLabels](const std::string& text, int x, int y, bool dontChache, SDL_Color color = CONTROL_LABEL_COLOR) {
+				if (dontChache)	renderCopySurfaceAndFree(renderer, handleSDLError(TTF_RenderText_Blended(font, text.data(), color)), x, y);
+				else {
+					auto iter = cachedLabels.find(text);
+					if (iter == cachedLabels.end()) {
+						auto ret = cachedLabels.insert_or_assign(text, unique_surface_ptr(handleSDLError(TTF_RenderText_Blended(font, text.data(), color))));
+						iter = ret.first;
+					}
+					renderCopySurface(renderer, iter->second.get(), x, y);
+				}
 			};
 
 			auto fillRect = [&renderer](int x, int y, int w, int h, SDL_Color color = CONTROL_IDLE_COLOR) {
@@ -192,7 +201,7 @@ bool updateLoop() {
 
 
 				fillRect(pos, CONTROLS_PADDING, CONTROLS_WIDTH, CONTROLS_HEIGHT, active && !ignoreMouse ? CONTROL_ACTIVE_COLOR : (over && !ignoreMouse ? CONTROL_HOVER_COLOR : CONTROL_IDLE_COLOR));
-				renderText(text, pos + CONTROLS_PADDING, 0);
+				renderText(text, pos + CONTROLS_PADDING, 0, ignoreMouse);
 				pos += CONTROLS_PADDING + CONTROLS_WIDTH;
 
 				return pressed;

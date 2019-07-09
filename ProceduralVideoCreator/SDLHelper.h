@@ -40,9 +40,15 @@ inline ConvertedTextureData surfaceToTexture(SDL_Renderer* renderer, SDL_Surface
 	return ret;
 }
 
+inline std::unordered_map<SDL_Surface*, ConvertedTextureData> _renderCopySurfaceCachedTextures;
+
 inline void renderCopySurface(SDL_Renderer* renderer, SDL_Surface* surface, int offX = 0, int offY = 0) {
-	auto textureData = surfaceToTexture(renderer, surface, offX, offY);
-	handleSDLError(SDL_RenderCopy(renderer, textureData.texture.get(), nullptr, &textureData.rect));
+	auto iter = _renderCopySurfaceCachedTextures.find(surface);
+	if (iter == _renderCopySurfaceCachedTextures.end()) {
+		auto ret = _renderCopySurfaceCachedTextures.insert_or_assign(surface, surfaceToTexture(renderer, surface, offX, offY));
+		iter = ret.first;
+	}
+	handleSDLError(SDL_RenderCopy(renderer, iter->second.texture.get(), nullptr, &iter->second.rect));
 }
 
 inline void renderCopySurfaceAndFree(SDL_Renderer* renderer, SDL_Surface* surface, int offX = 0, int offY = 0) {
