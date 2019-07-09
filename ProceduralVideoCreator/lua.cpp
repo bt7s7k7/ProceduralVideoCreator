@@ -2,7 +2,6 @@
 #include "constants.h"
 #include "globals.h"
 
-
 void setupLuaTasks(kaguya::State& state);
 
 /*
@@ -43,6 +42,13 @@ void createLuaBindings() {
 		}
 
 		projectLength = length;
+	});
+
+	luaState["mapTime"].setFunction([](double time, double start, double duration) {
+		auto frac = (time - start) / duration;
+		frac = std::min(1.0, std::max(0.0, frac));
+		frac = (std::sin((frac - 0.5) * 3.14159265359) + 1) / 2;
+		return frac;
 	});
 
 	luaState.setErrorHandler([](int statuscode, const char* message) ->void {
