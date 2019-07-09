@@ -10,7 +10,7 @@ struct Vector {
 
 	Vector(coordinate x_, coordinate y_) : x(x_), y(y_) {};
 
-	coordinate X() {
+	coordinate X() const {
 		return x;
 	}
 
@@ -18,23 +18,23 @@ struct Vector {
 		return y;
 	}
 
-	Vector Mul(coordinate value) {
+	Vector Mul(coordinate value) const {
 		return Vector(x * value, y * value);
 	};
 
-	Vector Add(const Vector& other) {
+	Vector Add(const Vector& other)  const {
 		return Vector(x + other.x, y + other.y);
 	}
 
-	std::string ToString() {
+	std::string ToString()  const {
 		return std::string("[") + std::to_string(x) + ", " + std::to_string(y) + "]";
 	}
 
-	coordinate Size() {
+	coordinate Size()  const {
 		return std::hypot(x, y);
 	}
 
-	Vector Normalize() {
+	Vector Normalize() const {
 		return Mul(1 / Size());
 	}
 
@@ -42,7 +42,7 @@ struct Vector {
 		return Vector(std::sin(angle), std::cos(angle));
 	}
 
-	std::pair<int, int> ScaleAndFloor(double scale) {
+	std::pair<int, int> ScaleAndFloor(double scale) const {
 		return { static_cast<int>(std::floor(x * scale)), static_cast<int>(std::floor(y * scale)) };
 	}
 
@@ -133,13 +133,40 @@ void setupLuaTasks(kaguya::State& state) {
 
 	state["tasks"]["fill"].setFunction([&testVoid](double dr, double dg, double db) {
 		if (testVoid()) return;
-
-		//int r = 0, g = 0, b = 0;
-
 		auto [r, g, b] = limitColors(dr, dg, db);
 
 		tempTasks->push_back(makeGenericTask([r = r, g = g, b = b](SDL_Surface* surface, double scale) {
 			SDL_FillRect(surface, nullptr, SDL_MapRGB(surface->format, r, g, b));
 		}));
+	});
+
+	state["tasks"]["rect"].setFunction([&testVoid](Vector pos, Vector size, bool center, bool fill, double dr, double dg, double db) {
+		if (testVoid()) return;
+		auto [r, g, b] = limitColors(dr, dg, db);
+
+		if (center) {
+			pos = pos.Add(size.Mul(-0.5));
+		}
+
+		tempTasks->push_back(makeGenericTask([r = r, g = g, b = b, pos, size, fill](SDL_Surface* surface, double scale) {
+			auto [x, y] = pos.ScaleAndFloor(scale);
+			auto [w, h] = size.ScaleAndFloor(scale);
+			if (!fill) {
+				SDL_Rect
+					top{ x,y,w,1 },
+					left{ x,y,1,h },
+					bottom{ x,y + h - 1, w, 1 },
+					right{x + w - 1, y, 1, h};
+				auto color = SDL_MapRGB(surface->format, r, g, b);
+				SDL_FillRect(surface, &top, color);
+				SDL_FillRect(surface, &left, color);
+				SDL_FillRect(surface, &bottom, color);
+				SDL_FillRect(surface, &right, color);
+			} else {
+				SDL_Rect rect{ x,y,w,h };
+				SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, r, g, b));
+			}
+		}));
+
 	});
 }
