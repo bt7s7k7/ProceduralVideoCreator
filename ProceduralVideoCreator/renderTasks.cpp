@@ -156,7 +156,7 @@ void setupLuaTasks(kaguya::State& state) {
 					top{ x,y,w,1 },
 					left{ x,y,1,h },
 					bottom{ x,y + h - 1, w, 1 },
-					right{x + w - 1, y, 1, h};
+					right{ x + w - 1, y, 1, h };
 				auto color = SDL_MapRGB(surface->format, r, g, b);
 				SDL_FillRect(surface, &top, color);
 				SDL_FillRect(surface, &left, color);
@@ -168,5 +168,94 @@ void setupLuaTasks(kaguya::State& state) {
 			}
 		}));
 
+	});
+
+	state["tasks"]["circle"].setFunction([&testVoid](Vector pos, coordinate radius, bool fill, double dr, double dg, double db) {
+		if (testVoid()) return;
+		auto [r, g, b] = limitColors(dr, dg, db);
+
+		tempTasks->push_back(makeGenericTask([rr = r, g = g, b = b, pos, r_ = radius, fill](SDL_Surface* surface, double scale) {
+			int r = static_cast<int>(std::floor(r_ * scale));
+			auto color = SDL_MapRGB(surface->format, rr, g, b);
+
+			auto draw = [&]() {
+				auto [cx, cy] = pos.ScaleAndFloor(scale);
+				int r2 = r * r;
+				int x = 0, x2 = 0, dx2 = 1;
+				int y = r, y2 = y * y, dy2 = 2 * y - 1;
+				int sum = r2;
+
+
+				std::vector<SDL_Rect> rects{};
+				int count;
+
+				if (!fill) {
+					rects.resize(8);
+					count = 8;
+					for (auto& rect : rects) {
+						rect = { 0,0,1,1 };
+					}
+				} else {
+					rects.resize(4);
+					count = 4;
+				}
+
+				auto rectsPtr = rects.data();
+
+				while (x <= y) {
+					/*
+					if (!fill) {
+	//#define draw(x,y) *(Uint32*)((Uint8*)surface->pixels + y * surface->pitch + x * 4) = color
+						// draw the eight points
+						draw(cx + x, cy + y);
+						draw(cx + x, cy - y);
+						draw(cx - x, cy + y);
+						draw(cx - x, cy - y);
+						draw(cx + y, cy + x);
+						draw(cx + y, cy - x);
+						draw(cx - y, cy + x);
+						draw(cx - y, cy - x);
+	#undef draw
+					} else {
+	#define draw(x1,x2,y) {SDL_Rect rect{x1,y,x2-x1,1}; SDL_FillRect(surface, &rect, color); }
+						draw(cx - x, cx + x, cy - y);
+						draw(cx - y, cx + y, cy + x);
+						draw(cx - y, cx + y, cy - x);
+						draw(cx - x, cx + x, cy + y);
+	#undef draw
+					}*/
+
+					if (!fill) {
+						rectsPtr[0] = { cx + x, cy + y, 1, 1 };
+						rectsPtr[1] = { cx + x, cy - y, 1, 1 };
+						rectsPtr[2] = { cx - x, cy + y, 1, 1 };
+						rectsPtr[3] = { cx - x, cy - y, 1, 1 };
+						rectsPtr[4] = { cx + y, cy + x, 1, 1 };
+						rectsPtr[5] = { cx + y, cy - x, 1, 1 };
+						rectsPtr[6] = { cx - y, cy + x, 1, 1 };
+						rectsPtr[7] = { cx - y, cy - x, 1, 1 };
+					} else {
+						rectsPtr[0] = { cx - x, cy - y, cx + x - (cx - x), 1 };
+						rectsPtr[1] = { cx - y, cy + x, cx + y - (cx - y), 1 };
+						rectsPtr[2] = { cx - y, cy - x, cx + y - (cx - y), 1 };
+						rectsPtr[3] = { cx - x, cy + y, cx + x - (cx - x), 1 };
+					}
+
+					SDL_FillRects(surface, rectsPtr, count, color);
+
+					sum -= dx2;
+					x2 += dx2;
+					x++;
+					dx2 += 2;
+					if (sum <= y2) {
+						y--; y2 -= dy2; dy2 -= 2;
+					}
+				} /* while */
+
+
+			};
+
+			draw();
+		}));
 	});
 }
