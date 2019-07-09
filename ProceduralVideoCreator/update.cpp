@@ -82,12 +82,13 @@ bool updateLoop() {
 						loadLua(filePath, fileLastModified);
 						spdlog::info("Reloaded specified file");
 						wantPreviewJob = true;
-						recalcPreviewScale();
-						if (time > projectLength) time = projectLength;
+
 					} catch (const kaguya::LuaException& err) {
 						spdlog::warn("Exception occured while executing specified file: \n{}", err.what());
 						fileLastModified = std::filesystem::last_write_time(filePath);
 					}
+					recalcPreviewScale();
+					if (time > projectLength) time = projectLength;
 				}
 			} catch (const std::filesystem::filesystem_error& err) {
 				spdlog::warn("Exception '{}' occured while reading specified file", err.what());

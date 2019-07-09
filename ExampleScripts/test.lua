@@ -1,5 +1,6 @@
-function update(time)
-	log(time)
+function update() 
+	tasks.test()
 end
+
 
 	
