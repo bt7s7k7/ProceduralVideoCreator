@@ -17,5 +17,5 @@ function update(time)
 	for i=1,2 do 
 		tasks.circle(size:mul(0.5):add(Vector.new(math.random(-20,20), math.random(-20,20))), (200 + math.random(-20,20)) * (mapTime(time, 2.1, 1)), false, 255, 255, 255)
 	end
-
+	tasks.line(size:mul(0.5), size:mul(0.5):add(Vector.fromAngle(time):mul(mapTime(time, 2.5, 1) * 200)), 255,255,255)
 end

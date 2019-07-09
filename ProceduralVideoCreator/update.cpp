@@ -271,6 +271,7 @@ bool updateLoop() {
 end:
 	spdlog::info("Update loop ended, cleaning up...");
 	// Destroying all SDL resources
+	_renderCopySurfaceCachedTextures.clear();
 	sliderWindowRenderer.reset();
 	sliderWindow.reset();
 	previewWindow.reset();

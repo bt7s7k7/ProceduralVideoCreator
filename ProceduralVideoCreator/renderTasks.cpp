@@ -7,7 +7,7 @@ std::vector<std::unique_ptr<RenderTask>>* tempTasks = nullptr;
 
 /*
 	Structure to store 2D coordinates,
-	also accesible from Lua but all 
+	also accesible from Lua but all
 	functions are camel case
 */
 struct Vector {
@@ -96,7 +96,7 @@ std::vector<std::unique_ptr<RenderTask>> updateLua(double time) {
 }
 
 /*
-	This functions multiplies all color values by 255, floors them and limits 
+	This functions multiplies all color values by 255, floors them and limits
 	them 0...255 inclusive then returns [r, g, b]. Use capture:
 	auto [r, g, b] = limitColors(dr, dg, db);
 */
@@ -261,5 +261,60 @@ void setupLuaTasks(kaguya::State& state) {
 			};
 			draw();
 		}));
+	});
+
+	//tasks.line
+	state["tasks"]["line"].setFunction([&testVoid](Vector pos1, Vector pos2, double dr, double dg, double db) {
+		if (testVoid()) return;
+		auto [r, g, b] = limitColors(dr, dg, db);
+
+		tempTasks->push_back(makeGenericTask([r = r, g = g, b = b, pos1, pos2](SDL_Surface* surface, double scale) {
+			auto [x1, y1] = pos1.ScaleAndFloor(scale);
+			auto [x2, y2] = pos2.ScaleAndFloor(scale);
+
+			bool flipH = false, flipV = false;
+			if (x1 > x2) {
+				std::swap(x1, x2);
+				flipH = true;
+			}
+			if (y1 > y2) {
+				std::swap(y1, y2);
+				flipV = true;
+			}
+
+
+
+			bool lerpVertical = (x2 - x1) > (y2 - y1);
+			bool flipOther = false;
+			bool flip = false;
+			if (lerpVertical && flipH && !flipV) flipOther = true;
+			if (!lerpVertical && flipH && !flipV) flip = true;
+			if (lerpVertical && !flipH && flipV) flipOther = true;
+			if (!lerpVertical && !flipH && flipV) flip = true;
+			auto color = SDL_MapRGB(surface->format, r, g, b);
+			int dist = lerpVertical ? y2 - y1 : x2 - x1;
+			int otherDist = !lerpVertical ? y2 - y1 : x2 - x1;
+
+			for (int i = 0; i < dist; i++) {
+				int start, end;
+				if (flipOther) {
+					start = static_cast<int>((1 - (i + 1) / (double)dist) * otherDist);
+					end = static_cast<int>((1 - (i + 0) / (double)dist) * otherDist);
+				} else {
+					start = static_cast<int>(((i + 0) / (double)dist) * otherDist);
+					end = static_cast<int>(((i + 1) / (double)dist) * otherDist);
+				}
+				
+				int ai;
+				if (flip) ai = dist - i;
+				else ai = i;
+
+				SDL_Rect rect;
+				if (lerpVertical) rect = { start + x1, ai + y1, end - start, 1 };
+				else rect = { ai + x1, start + y1, 1, end - start };
+				SDL_FillRect(surface, &rect, color);
+			}
+		}));
+
 	});
 }
