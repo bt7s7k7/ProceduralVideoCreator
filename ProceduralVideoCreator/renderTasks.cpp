@@ -87,8 +87,10 @@ std::vector<std::unique_ptr<RenderTask>> updateLua(double time) {
 	std::vector<std::unique_ptr<RenderTask>> ret;
 
 	tempTasks = &ret;
-
+#pragma warning( push )
+#pragma warning( disable : 26444 )
 	if (luaState["update"].isType<kaguya::LuaFunction>()) luaState["update"](time);
+#pragma warning( pop ) 
 
 	tempTasks = nullptr;
 
@@ -298,11 +300,11 @@ void setupLuaTasks(kaguya::State& state) {
 			for (int i = 0; i < dist; i++) {
 				int start, end;
 				if (flipOther) {
-					start = static_cast<int>((1 - (i + 1) / (double)dist) * otherDist);
+					start = static_cast<int>((1 - ((double)i + 1) / dist) * otherDist);
 					end = static_cast<int>((1 - (i + 0) / (double)dist) * otherDist);
 				} else {
 					start = static_cast<int>(((i + 0) / (double)dist) * otherDist);
-					end = static_cast<int>(((i + 1) / (double)dist) * otherDist);
+					end = static_cast<int>((((double)i + 1) / (double)dist) * otherDist);
 				}
 				
 				int ai;
@@ -317,4 +319,6 @@ void setupLuaTasks(kaguya::State& state) {
 		}));
 
 	});
+
+
 }
