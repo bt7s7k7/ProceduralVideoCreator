@@ -61,6 +61,21 @@ void createLuaBindings() {
 		throw kaguya::LuaException(statuscode, std::string(message));
 	});
 
+	luaState["LuaSurfacePtr"].setClass(kaguya::UserdataMetatable<LuaSurfacePtr>()
+		.addFunction("toString", &LuaSurfacePtr::ToString)
+	);
+
+
+	luaState["loadImage"].setFunction([](std::string rel) {
+		auto loadPath = filePath.parent_path() / rel;
+
+		auto surface = unique_surface_ptr(handleSDLError(IMG_Load(loadPath.string().data())));
+		auto ret = LuaSurfacePtr{ std::shared_ptr<unique_surface_ptr>(new unique_surface_ptr(std::move(surface))) };
+		spdlog::debug("Loaded image for in Lua '{}'", ret.ToString());
+
+		return ret;
+	});
+
 	spdlog::info("Registering tasks...");
 	setupLuaTasks(luaState);
 

@@ -31,6 +31,20 @@ inline unique_window_ptr sliderWindow;
 inline unique_window_ptr previewWindow;
 inline unique_renderer_ptr sliderWindowRenderer;
 
+struct LuaSurfacePtr {
+	std::shared_ptr<unique_surface_ptr> surface;
+
+	std::string ToString() {
+		if (!surface) return "<EMPTY LuaSurfacePtr>";
+		if (!*surface) return "<INVALID LuaSurfacePtr>";
+		return "<LuaSurfacePtr: " + std::to_string((std::size_t)(surface->get())) + ">";
+	}
+
+	~LuaSurfacePtr() {
+		if (surface.use_count() == 1) spdlog::debug("Destroyed Lua image {}", ToString());
+	}
+};
+
 inline std::filesystem::path exePath;
 
 /*

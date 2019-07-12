@@ -25,4 +25,4 @@ constexpr int CONTROLS_PADDING = 4, CONTROLS_LABEL_PADDING = 2, CONTROLS_HEIGHT 
 constexpr char LABEL_TIME[] = "{:.2f} / {}", LABEL_PAUSEPLAY[] = "Pause/Play", LABEL_RENDERFRAME[] = "Frame", LABEL_RENDER_PROJECT[] = "Render", LABEL_FORCERELOAD[] = "Force";
 constexpr SDL_Color CONTROL_IDLE_COLOR = { 50,50,50,255 }, CONTROL_HOVER_COLOR = { 100,100,100,255 }, CONTROL_ACTIVE_COLOR = { 50,100,50,255 }, CONTROL_LABEL_COLOR = {255,255,255,255};
 
-using coordinate = double;
+using coordinate_t = double;

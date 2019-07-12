@@ -3,7 +3,7 @@ local size = Vector.new(1920,1080)
 setDimensions(size:x(), size:y())
 setLength(10)
 
-
+local testImage = loadImage("testImage.png")
 
 function update(time) 
 	math.randomseed(time * 100)
@@ -20,4 +20,6 @@ function update(time)
 	tasks.line(size:mul(0.5), size:mul(0.5):add(Vector.fromAngle(time):mul(mapTime(time, 2.5, 1) * 200)), 1,1,1)
 
 	tasks.text(Vector.new(size:x() / 2, size:y() * 0.1), 40, Vector.center, lerpText("", "PVC - Procedural Video Creator", mapTime(time, 3,1)), -1, 1,1,1)
+
+	tasks.image(size:mul(0.5), Vector.new(1078,298), Vector.one:mul(mapTime(time, 4, 1)), true, testImage)
 end

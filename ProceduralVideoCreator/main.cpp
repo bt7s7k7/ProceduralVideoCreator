@@ -27,9 +27,12 @@ int main(int argc, char** args) try {
 	spdlog::info("Initializing SDL...");
 	handleSDLError(SDL_Init(SDL_INIT_VIDEO));
 	handleSDLError(TTF_Init());
+	handleSDLError(IMG_Init(0));
 
 	std::atexit([]() {
 		SDL_Quit();
+		IMG_Quit();
+		TTF_Quit();
 	});
 
 	if (!setup(parsed, options)) return 1;

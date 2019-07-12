@@ -12,19 +12,19 @@ std::vector<std::unique_ptr<RenderTask>>* tempTasks = nullptr;
 	functions are camel case
 */
 struct Vector {
-	coordinate x, y;
+	coordinate_t x, y;
 
-	Vector(coordinate x_, coordinate y_) : x(x_), y(y_) {};
+	Vector(coordinate_t x_, coordinate_t y_) : x(x_), y(y_) {};
 
-	coordinate X() const {
+	coordinate_t X() const {
 		return x;
 	}
 
-	coordinate Y() {
+	coordinate_t Y() {
 		return y;
 	}
 
-	Vector Mul(coordinate value) const {
+	Vector Mul(coordinate_t value) const {
 		return Vector(x * value, y * value);
 	};
 
@@ -36,7 +36,7 @@ struct Vector {
 		return std::string("[") + std::to_string(x) + ", " + std::to_string(y) + "]";
 	}
 
-	coordinate Size()  const {
+	coordinate_t Size()  const {
 		return std::hypot(x, y);
 	}
 
@@ -44,7 +44,7 @@ struct Vector {
 		return Mul(1 / Size());
 	}
 
-	static Vector FromAngle(coordinate angle) {
+	static Vector FromAngle(coordinate_t angle) {
 		return Vector(std::sin(angle), std::cos(angle));
 	}
 
@@ -117,6 +117,10 @@ std::tuple<Uint8, Uint8, Uint8> limitColors(double dr, double dg, double db) {
 	return { r,g,b };
 }
 
+void limit10(double& value) {
+	value = std::min(1.0, std::max(value, 0.0));
+}
+
 void setupLuaTasks(kaguya::State& state) {
 
 	// Creating bindings for Vector class inside Lua
@@ -132,13 +136,14 @@ void setupLuaTasks(kaguya::State& state) {
 		.addStaticFunction("fromAngle", &Vector::FromAngle)
 	);
 
-	state["Vector"]["zero"] = Vector(0,0);
+	state["Vector"]["zero"] = Vector(0, 0);
 	state["Vector"]["one"] = Vector(1, 1);
 	state["Vector"]["center"] = Vector(0.5, 0.5);
 	state["Vector"]["up"] = Vector(0, -1);
 	state["Vector"]["down"] = Vector(0, 1);
 	state["Vector"]["left"] = Vector(-1, 0);
 	state["Vector"]["right"] = Vector(1, 0);
+	state["Vector"]["none"] = Vector(-1, -1);
 
 	state["tasks"] = kaguya::NewTable(); // Creating global table for all tasks
 
@@ -210,7 +215,7 @@ void setupLuaTasks(kaguya::State& state) {
 	});
 
 	// tasks.circle
-	state["tasks"]["circle"].setFunction([&testVoid](Vector pos, coordinate radius, bool fill, double dr, double dg, double db) {
+	state["tasks"]["circle"].setFunction([&testVoid](Vector pos, coordinate_t radius, bool fill, double dr, double dg, double db) {
 		if (testVoid()) return;
 		auto [r, g, b] = limitColors(dr, dg, db);
 
@@ -339,7 +344,7 @@ void setupLuaTasks(kaguya::State& state) {
 	});
 
 
-	state["tasks"]["text"].setFunction([&testVoid](Vector pos, coordinate height, Vector aling, std::string text, int maxWidth, double dr, double dg, double db) {
+	state["tasks"]["text"].setFunction([&testVoid](Vector pos, coordinate_t height, Vector aling, std::string text, int maxWidth, double dr, double dg, double db) {
 		if (testVoid()) return;
 		auto [r, g, b] = limitColors(dr, dg, db);
 
@@ -362,10 +367,49 @@ void setupLuaTasks(kaguya::State& state) {
 			int oX = static_cast<int>(std::floor(rendered->w * aling.x));
 			int oY = static_cast<int>(std::floor(rendered->h * aling.y));
 
-			SDL_Rect rect{x - oX, y - oY, rendered->w, rendered->h};
+			SDL_Rect rect{ x - oX, y - oY, rendered->w, rendered->h };
 			SDL_BlitSurface(rendered.get(), nullptr, surface, &rect);
 
 		}));
 	});
 
+
+	state["tasks"]["image"].setFunction([&testVoid](Vector pos, Vector size, Vector fill, bool center, LuaSurfacePtr image) {
+		if (testVoid()) return;
+		if (size.x < 1 || size.y < 1 || fill.x <= 0 || fill.y <= 0) return;
+
+		if (!image.surface) throw std::runtime_error("image is empty /* Do you have enough arguments? (5 expected) */");
+
+		limit10(fill.x);
+		limit10(fill.y);
+
+		Vector oSize = size;
+		oSize.x *= fill.x;
+		oSize.y *= fill.y;
+
+		SDL_Point iSize = { image.surface->get()->w, image.surface->get()->h };
+		SDL_Point iSizeFull = iSize;
+		iSize.x = static_cast<int>(std::floor(fill.x * iSize.x));
+		iSize.y = static_cast<int>(std::floor(fill.y * iSize.y));
+
+		tempTasks->push_back(makeGenericTask([pos, oSize, iSize, image = image.surface, center, iSizeFull](SDL_Surface* surface, double scale) {
+			auto [x, y] = pos.ScaleAndFloor(scale);
+			auto [iw, ih] = iSize;
+			auto [ow, oh] = oSize.ScaleAndFloor(scale);
+
+			SDL_Rect srcrect;
+			SDL_Rect dstrect;
+
+			if (center) {
+				srcrect = { iSizeFull.x / 2 - iw / 2, iSizeFull.y / 2 - ih / 2, iw, ih };
+				dstrect = { x - ow / 2, y - oh / 2, ow, oh };
+			} else {
+				srcrect = { 0,0,iw,ih };
+				dstrect = { x,y,ow,oh };
+			}
+
+			SDL_BlitScaled(image->get(), &srcrect, surface, &dstrect);
+
+		}));
+	});
 }

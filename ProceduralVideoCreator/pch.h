@@ -19,6 +19,7 @@
 #include <SDL2/SDL_ttf.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <SDL2/SDL_image.h>
 
 #include <iostream>
 #include <filesystem>
