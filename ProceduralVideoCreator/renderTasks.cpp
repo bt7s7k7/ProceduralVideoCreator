@@ -2,6 +2,7 @@
 #include "rendering.h"
 #include "globals.h"
 #include "constants.h"
+#include "font.h"
 
 std::vector<std::unique_ptr<RenderTask>>* tempTasks = nullptr;
 
@@ -295,7 +296,7 @@ void setupLuaTasks(kaguya::State& state) {
 			}
 
 			/* If the main direction is vertical */
-			bool lerpVertical = (x2 - x1) > (y2 - y1); 
+			bool lerpVertical = (x2 - x1) > (y2 - y1);
 			// If we should flip coordinates
 			/* Flip other */
 			bool flipOther = false;
@@ -322,7 +323,7 @@ void setupLuaTasks(kaguya::State& state) {
 					start = static_cast<int>(((i + 0) / (double)dist) * otherDist);
 					end = static_cast<int>((((double)i + 1) / (double)dist) * otherDist);
 				}
-				
+
 				int ai;
 				if (flip) ai = dist - i; // Should we flip the main direction
 				else ai = i;
@@ -337,5 +338,34 @@ void setupLuaTasks(kaguya::State& state) {
 
 	});
 
+
+	state["tasks"]["text"].setFunction([&testVoid](Vector pos, coordinate height, Vector aling, std::string text, int maxWidth, double dr, double dg, double db) {
+		if (testVoid()) return;
+		auto [r, g, b] = limitColors(dr, dg, db);
+
+		if (text.length() == 0 || height < 1) return;
+
+		tempTasks->push_back(makeGenericTask([r = r, g = g, b = b, pos, h_ = height, aling, text, mW_ = maxWidth](SDL_Surface* surface, double scale) {
+			auto [x, y] = pos.ScaleAndFloor(scale);
+
+			int height = static_cast<int>(std::floor(h_ * scale));
+			int maxWidth = static_cast<int>(std::floor(mW_ * scale));
+
+			auto font = getOrLoadFont(height);
+			unique_surface_ptr rendered;
+			if (maxWidth > 0) {
+				rendered.reset(handleSDLError(TTF_RenderText_Blended_Wrapped(font, text.data(), SDL_Color{ r, g, b, 255 }, maxWidth)));
+			} else {
+				rendered.reset(handleSDLError(TTF_RenderText_Blended(font, text.data(), SDL_Color{ r, g, b, 255 })));
+			}
+
+			int oX = static_cast<int>(std::floor(rendered->w * aling.x));
+			int oY = static_cast<int>(std::floor(rendered->h * aling.y));
+
+			SDL_Rect rect{x - oX, y - oY, rendered->w, rendered->h};
+			SDL_BlitSurface(rendered.get(), nullptr, surface, &rect);
+
+		}));
+	});
 
 }
