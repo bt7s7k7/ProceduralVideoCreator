@@ -151,7 +151,7 @@ void setupLuaTasks(kaguya::State& state) {
 			int w = surface->w, h = surface->h;
 			for (int x = 0; x < w; x++) {
 				for (int y = 0; y < h; y++) {
-					*(Uint32*)((Uint8*)surface->pixels + y * surface->pitch + x * 4) = rendering::mapRGBA(surface->format, x % 255, 0, 0);////0xffffffff;
+					*(Uint32*)((Uint8*)surface->pixels + y * surface->pitch + x * 4) = rendering::mapRGBA(surface->format, x % 255, 0, 0);
 				}
 			}
 		}));
@@ -180,6 +180,7 @@ void setupLuaTasks(kaguya::State& state) {
 			auto [x, y] = pos.ScaleAndFloor(scale);
 			auto [w, h] = size.ScaleAndFloor(scale);
 			if (!fill) {
+				// If we want not filled, just draw the edge lines
 				SDL_Rect
 					top{ x,y,w,1 },
 					left{ x,y,1,h },
@@ -216,16 +217,13 @@ void setupLuaTasks(kaguya::State& state) {
 				int y = r, y2 = y * y, dy2 = 2 * y - 1;
 				int sum = r2;
 
-
+				// Allocate space for rects
 				std::vector<SDL_Rect> rects{};
 				int count;
 
 				if (!fill) {
 					rects.resize(8);
 					count = 8;
-					for (auto& rect : rects) {
-						rect = { 0,0,1,1 };
-					}
 				} else {
 					rects.resize(4);
 					count = 4;
@@ -235,6 +233,7 @@ void setupLuaTasks(kaguya::State& state) {
 
 				while (x <= y) {
 					if (!fill) {
+						// Render a point for each octet
 						rectsPtr[0] = { cx + x, cy + y, 1, 1 };
 						rectsPtr[1] = { cx + x, cy - y, 1, 1 };
 						rectsPtr[2] = { cx - x, cy + y, 1, 1 };
@@ -244,12 +243,13 @@ void setupLuaTasks(kaguya::State& state) {
 						rectsPtr[6] = { cx - y, cy + x, 1, 1 };
 						rectsPtr[7] = { cx - y, cy - x, 1, 1 };
 					} else {
+						// Draw lines for a full circle
 						rectsPtr[0] = { cx - x, cy - y, cx + x - (cx - x), 1 };
 						rectsPtr[1] = { cx - y, cy + x, cx + y - (cx - y), 1 };
 						rectsPtr[2] = { cx - y, cy - x, cx + y - (cx - y), 1 };
 						rectsPtr[3] = { cx - x, cy + y, cx + x - (cx - x), 1 };
 					}
-
+					// Draw points / lines
 					SDL_FillRects(surface, rectsPtr, count, color);
 
 					sum -= dx2;
@@ -274,6 +274,7 @@ void setupLuaTasks(kaguya::State& state) {
 			auto [x1, y1] = pos1.ScaleAndFloor(scale);
 			auto [x2, y2] = pos2.ScaleAndFloor(scale);
 
+			// Make sure the coordinates change the right direction
 			bool flipH = false, flipV = false;
 			if (x1 > x2) {
 				std::swap(x1, x2);
@@ -284,22 +285,28 @@ void setupLuaTasks(kaguya::State& state) {
 				flipV = true;
 			}
 
-
-
-			bool lerpVertical = (x2 - x1) > (y2 - y1);
+			/* If the main direction is vertical */
+			bool lerpVertical = (x2 - x1) > (y2 - y1); 
+			// If we should flip coordinates
+			/* Flip other */
 			bool flipOther = false;
+			/* Flip main direction */
 			bool flip = false;
+			// Testing for conditions
 			if (lerpVertical && flipH && !flipV) flipOther = true;
 			if (!lerpVertical && flipH && !flipV) flip = true;
 			if (lerpVertical && !flipH && flipV) flipOther = true;
 			if (!lerpVertical && !flipH && flipV) flip = true;
+			// Getting the color
 			auto color = SDL_MapRGB(surface->format, r, g, b);
+			/* Size of the line in the main direction */
 			int dist = lerpVertical ? y2 - y1 : x2 - x1;
+			/* Size of the line in the other direction */
 			int otherDist = !lerpVertical ? y2 - y1 : x2 - x1;
 
 			for (int i = 0; i < dist; i++) {
 				int start, end;
-				if (flipOther) {
+				if (flipOther) { // Should we flip the other direction
 					start = static_cast<int>((1 - ((double)i + 1) / dist) * otherDist);
 					end = static_cast<int>((1 - (i + 0) / (double)dist) * otherDist);
 				} else {
@@ -308,9 +315,10 @@ void setupLuaTasks(kaguya::State& state) {
 				}
 				
 				int ai;
-				if (flip) ai = dist - i;
+				if (flip) ai = dist - i; // Should we flip the main direction
 				else ai = i;
 
+				// Rendering line segments
 				SDL_Rect rect;
 				if (lerpVertical) rect = { start + x1, ai + y1, end - start, 1 };
 				else rect = { ai + x1, start + y1, 1, end - start };
