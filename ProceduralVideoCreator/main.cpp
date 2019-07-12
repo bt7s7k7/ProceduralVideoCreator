@@ -29,12 +29,6 @@ int main(int argc, char** args) try {
 	handleSDLError(TTF_Init());
 	handleSDLError(IMG_Init(0));
 
-	std::atexit([]() {
-		SDL_Quit();
-		IMG_Quit();
-		TTF_Quit();
-	});
-
 	if (!setup(parsed, options)) return 1;
 
 	spdlog::debug("Executable path: {}", exePath.string());
