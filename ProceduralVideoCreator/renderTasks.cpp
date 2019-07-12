@@ -102,15 +102,16 @@ std::vector<std::unique_ptr<RenderTask>> updateLua(double time) {
 	them 0...255 inclusive then returns [r, g, b]. Use capture:
 	auto [r, g, b] = limitColors(dr, dg, db);
 */
-std::tuple<int, int, int> limitColors(double dr, double dg, double db) {
+std::tuple<Uint8, Uint8, Uint8> limitColors(double dr, double dg, double db) {
 
-	int r = static_cast<int>(std::floor(dr * 255));
-	int g = static_cast<int>(std::floor(dg * 255));
-	int b = static_cast<int>(std::floor(db * 255));
+	dr = std::min(1.0, std::max(dr, 0.0));
+	dg = std::min(1.0, std::max(dg, 0.0));
+	db = std::min(1.0, std::max(db, 0.0));
 
-	r = std::min(255, std::max(r, 0));
-	g = std::min(255, std::max(g, 0));
-	b = std::min(255, std::max(b, 0));
+	Uint8 r = static_cast<Uint8>(std::floor(dr * 255));
+	Uint8 g = static_cast<Uint8>(std::floor(dg * 255));
+	Uint8 b = static_cast<Uint8>(std::floor(db * 255));
+
 
 	return { r,g,b };
 }
