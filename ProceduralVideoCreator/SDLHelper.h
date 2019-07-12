@@ -7,10 +7,20 @@ public:
 	using std::runtime_error::runtime_error;
 };
 
-inline void handleSDLError(int errorCode) {
+inline int handleSDLError(int errorCode) {
 	if (errorCode == -1) {
 		throw SDLException("[SDL] " + std::string(SDL_GetError()));
 	}
+
+	return errorCode;
+}
+
+inline Sint64 handleSDLError(Sint64 errorCode) {
+	if (errorCode == -1) {
+		handleSDLError(-1);
+	}
+
+	return errorCode;
 }
 
 template <typename T>
