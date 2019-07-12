@@ -51,6 +51,12 @@ void createLuaBindings() {
 		return frac;
 	});
 
+	luaState["lerpText"].setFunction([](std::string src, std::string dest, double frac) {
+		frac = std::min(1.0, std::max(0.0, frac));
+		std::string ret = dest.substr(0, int((double)dest.length() * frac)) + src.substr(int((double)(src.length()) * frac));
+		return ret;
+	});
+
 	luaState.setErrorHandler([](int statuscode, const char* message) ->void {
 		throw kaguya::LuaException(statuscode, std::string(message));
 	});
