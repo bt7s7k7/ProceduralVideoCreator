@@ -131,6 +131,14 @@ void setupLuaTasks(kaguya::State& state) {
 		.addStaticFunction("fromAngle", &Vector::FromAngle)
 	);
 
+	state["Vector"]["zero"] = Vector(0,0);
+	state["Vector"]["one"] = Vector(1, 1);
+	state["Vector"]["center"] = Vector(0.5, 0.5);
+	state["Vector"]["up"] = Vector(0, -1);
+	state["Vector"]["down"] = Vector(0, 1);
+	state["Vector"]["left"] = Vector(-1, 0);
+	state["Vector"]["right"] = Vector(1, 0);
+
 	state["tasks"] = kaguya::NewTable(); // Creating global table for all tasks
 
 	/*
