@@ -60,15 +60,15 @@ bool updateLoop() {
 		This points to the job rendering the preview, if the preview is not being rendered it's nullptr
 	*/
 	std::shared_ptr<RenderJob> previewJob = nullptr;
-	/* 
+	/*
 		Dictates if a preview job is wanted, set on Lua reset,
 		time scrubbing, and during plaing. It's checked inside
-		loop. When set it's reset and a preview job is requested 
+		loop. When set it's reset and a preview job is requested
 	*/
 	bool wantPreviewJob = true;
-	/* 
+	/*
 		Current time of preview,
-		it's set by plaing and 
+		it's set by plaing and
 		time scrubbing. It's checked
 		by time scrubbing and plaing
 		code and when Lua resets.
@@ -92,14 +92,14 @@ bool updateLoop() {
 	*/
 	bool plaing = false;
 	/*
-		Time when last frame happend while preview plaing.
-		Used and set by plaing code. Difference between this
-		and current time is used to increment preview time.
+		Time when last frame happend. Used and set by plaing code.
+		Difference between this and current time is used to
+		increment preview time. Also used for framerate limiting.
 	*/
-	std::chrono::high_resolution_clock::time_point lastPlayFrame;
+	std::chrono::high_resolution_clock::time_point lastPlayFrame = std::chrono::high_resolution_clock::now();
 
-	/* 
-		Last state of mouse buttons. Used and set by 
+	/*
+		Last state of mouse buttons. Used and set by
 		controls code. Used for click detection.
 	*/
 	Uint32 lastMouseState = SDL_GetMouseState(nullptr, nullptr);
@@ -167,7 +167,7 @@ bool updateLoop() {
 
 			// Drawing background
 			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-			SDL_RenderFillRect(renderer, nullptr); 
+			SDL_RenderFillRect(renderer, nullptr);
 
 			auto renderText = [&font, &renderer, &cachedLabels](const std::string& text, int x, int y, bool dontChache, SDL_Color color = CONTROL_LABEL_COLOR) {
 				if (dontChache)	renderCopySurfaceAndFree(renderer, handleSDLError(TTF_RenderText_Blended(font, text.data(), color)), x, y);
@@ -214,7 +214,6 @@ bool updateLoop() {
 					wantPreviewJob = true; // If we stop plaing, we request a preview job to make sure to render the last frame
 				} else {
 					plaing = true;
-					lastPlayFrame = std::chrono::high_resolution_clock::now(); // Update the last frame time point, used to increment preview time in plaing code
 				}
 			}
 			drawControll(LABEL_RENDERFRAME);
@@ -265,6 +264,15 @@ bool updateLoop() {
 			lastMouseState = SDL_GetMouseState(nullptr, nullptr);
 			// Presenting the rendered content to slider window
 			SDL_RenderPresent(renderer);
+
+			{ // Frame rate limiting
+				auto now = std::chrono::high_resolution_clock::now();
+				double diff = std::chrono::duration<double>(now - lastPlayFrame).count();
+				int sleep = static_cast<int>(((1000.0 / 60.0) - diff * 1000));
+				lastPlayFrame = std::chrono::high_resolution_clock::now(); // Update the last frame time point, used to increment preview time in plaing code and fps limiting. It's set before the delay so the delay is counted in the elapsed time.
+				if (sleep > 0) SDL_Delay(sleep);
+			}
+
 		}
 	}
 
