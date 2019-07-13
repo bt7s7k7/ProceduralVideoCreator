@@ -19,6 +19,7 @@ inline int maxPreviewSize;
 inline double previewScale;
 inline double projectLength;
 inline int projectFramerate = 30;
+inline bool nowindow;
 
 /*
 	This window should contain all controlls, including the time slider,

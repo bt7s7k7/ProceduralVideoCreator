@@ -20,6 +20,7 @@ int main(int argc, char** args) try {
 		(NOHOTSWAP_ARG_DEFINITION, NOHOTSWAP_ARG_DESC)
 		(DEBUG_ARG_DEFINITION, DEBUG_ARG_DESC)
 		(MAXS_ARG_DEFINITION, MAXS_ARG_DESC, cxxopts::value<int>()->default_value("960"))
+		(NOWINDOW_ARG_DEFINITION, NOWINDOW_ARG_DESC)
 		;
 
 	auto parsed = options.parse(argc, args);
