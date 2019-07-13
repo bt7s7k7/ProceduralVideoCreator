@@ -322,10 +322,10 @@ bool updateLoop() {
 			SDL_RenderPresent(renderer);
 		}
 		if (lastProjectRenderFrame >= 0) {
-			if (projectRenderJobs.size() < 50) {
+			if (projectRenderJobs.size() < MAX_RENDER_JOBS) {
 				auto maxframes = static_cast<int>(projectLength * projectFramerate);
 				int frame = lastProjectRenderFrame;
-				auto frames = std::min(lastProjectRenderFrame + 50, maxframes);
+				auto frames = std::min(lastProjectRenderFrame + static_cast<int>(MAX_RENDER_JOBS), maxframes);
 
 				for (; frame < frames; frame++) {
 					startProjectRenderJob(frame / (double)projectFramerate + (1 / (double)projectFramerate / 2));

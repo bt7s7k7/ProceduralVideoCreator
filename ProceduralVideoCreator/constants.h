@@ -19,7 +19,7 @@ constexpr char MAXS_ARG_NAME[] = "max_size";
 constexpr char MAXS_ARG_DEFINITION[] = "m,max_size";
 constexpr char MAXS_ARG_DESC[] = "Maximum size of preview";
 
-constexpr std::size_t MAX_RENDER_JOBS = 4;
+constexpr std::size_t MAX_RENDER_JOBS = 50;
 
 constexpr int CONTROLS_PADDING = 4, CONTROLS_LABEL_PADDING = 2, CONTROLS_HEIGHT = 20, CONTROLS_FONT_SIZE = CONTROLS_HEIGHT - CONTROLS_LABEL_PADDING * 2, SLIDER_LINE_WIDTH = 2, SLIDER_HANDLE_WIDTH = 4, CONTROLS_COUNT = 5, CONTROLS_WIDTH = 80;
 constexpr char LABEL_TIME[] = "{:.2f} / {}", LABEL_PAUSEPLAY[] = "Pause/Play", LABEL_RENDERFRAME[] = "Frame", LABEL_RENDER_PROJECT[] = "Render", LABEL_FORCERELOAD[] = "Force";
