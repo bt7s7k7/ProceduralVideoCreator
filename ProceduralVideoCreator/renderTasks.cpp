@@ -95,6 +95,8 @@ std::vector<std::unique_ptr<RenderTask>> updateLua(double time) {
 
 	tempTasks = nullptr;
 
+	luaState.garbageCollect();
+
 	return std::move(ret);
 }
 
