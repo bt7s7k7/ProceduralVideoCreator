@@ -360,16 +360,20 @@ void setupLuaTasks(kaguya::State& state) {
 
 			auto font = getOrLoadFont(height);
 			unique_surface_ptr rendered;
-			if (maxWidth > 0) {
-				rendered.reset(handleSDLError(TTF_RenderText_Blended_Wrapped(font, text.data(), SDL_Color{ r, g, b, 255 }, maxWidth)));
-			} else {
-				rendered.reset(handleSDLError(TTF_RenderText_Blended(font, text.data(), SDL_Color{ r, g, b, 255 })));
+			{
+				std::lock_guard<std::mutex> l(rendering::sdlMutex);
+				if (maxWidth > 0) {
+					rendered.reset(handleSDLError(TTF_RenderText_Blended_Wrapped(font, text.data(), SDL_Color{ r, g, b, 255 }, maxWidth)));
+				} else {
+					rendered.reset(handleSDLError(TTF_RenderText_Blended(font, text.data(), SDL_Color{ r, g, b, 255 })));
+				}
 			}
 
 			int oX = static_cast<int>(std::floor(rendered->w * aling.x));
 			int oY = static_cast<int>(std::floor(rendered->h * aling.y));
 
 			SDL_Rect rect{ x - oX, y - oY, rendered->w, rendered->h };
+			std::lock_guard<std::mutex> l(rendering::sdlMutex);
 			SDL_BlitSurface(rendered.get(), nullptr, surface, &rect);
 
 		}));
@@ -409,7 +413,7 @@ void setupLuaTasks(kaguya::State& state) {
 				srcrect = { 0,0,iw,ih };
 				dstrect = { x,y,ow,oh };
 			}
-
+			std::lock_guard<std::mutex> l(rendering::sdlMutex);
 			SDL_BlitScaled(image->get(), &srcrect, surface, &dstrect);
 
 		}));

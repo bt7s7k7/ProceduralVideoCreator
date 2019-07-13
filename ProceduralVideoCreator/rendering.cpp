@@ -9,6 +9,7 @@ namespace rendering {
 		Mutex for access to job flags and job array
 	*/
 	std::mutex renderJobsMutex;
+	std::mutex sdlMutex;
 	/*
 		This value is checked by all thrads every iteration
 		If set to true all threads will return
@@ -41,7 +42,7 @@ namespace rendering {
 		spdlog::debug("Pushed job, now {} jobs in queue", renderJobs.size());
 	}
 
-	void threadFunction(const char* threadName) {
+	void threadFunction(std::string threadName) {
 
 		spdlog::info("{} started", threadName);
 		while (!shouldQuit) {
@@ -63,17 +64,33 @@ namespace rendering {
 				spdlog::debug("{} received notification!", threadName);
 			} else {
 				std::unique_lock<std::mutex>(renderJobsMutex);
-				//SDL_LockSurface(currJob->surface.get());
+				{ // Allocate surface
+					SDL_Surface* surface = nullptr;
+					while (surface == nullptr) {
+						{
+							std::lock_guard<std::mutex> l(sdlMutex);
+							surface = SDL_CreateRGBSurface(0, currJob->size.x, currJob->size.y, 32, 0, 0, 0, 0);
+						}
+						SDL_Delay(10); // If not enough space, wait
+					}
+					currJob->surface.reset(surface);
+				}
 				auto surface = currJob->surface.get();
 				for (auto& task : currJob->tasks) {
 					task->Render(surface, currJob->scale);
 					std::lock_guard<std::mutex> l(rendering::renderJobsMutex);
 					if (currJob->canceled) break;
 				}
-				std::lock_guard<std::mutex> l(rendering::renderJobsMutex);
+				std::unique_lock<std::mutex> l(rendering::renderJobsMutex);
 				if (currJob->canceled) {
 					spdlog::debug("{}'s job {} was cancelled", threadName, (std::size_t) currJob.get());
 				} else {
+					if (!currJob->fileName.empty()) {
+						l.unlock();
+						IMG_SaveJPG(surface, currJob->fileName.data(), 100);
+						l.lock();
+					}
+
 					spdlog::debug("{} finished job {}", threadName, (std::size_t) currJob.get());
 					currJob->finished = true;
 				}
@@ -86,10 +103,10 @@ namespace rendering {
 
 	void setupThreadSwarm() {
 		spdlog::info("Launching thread swarm...");
-		threads.emplace_back(threadFunction, "[Alpha]");
-		threads.emplace_back(threadFunction, "<Betta>");
-		threads.emplace_back(threadFunction, "{Gamma}");
-		threads.emplace_back(threadFunction, ":Delta:");
+		for (int i = 0; i < 10; i++) {
+			auto name = ("[" + std::string(1, 'A' + i) + "]");
+			threads.emplace_back(threadFunction, name);
+		}
 	}
 
 	void endThreadSwarm() {

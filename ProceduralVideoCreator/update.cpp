@@ -97,11 +97,11 @@ bool updateLoop() {
 		increment preview time. Also used for framerate limiting.
 	*/
 	std::chrono::high_resolution_clock::time_point lastPlayFrame = std::chrono::high_resolution_clock::now();
-	/* 
+	/*
 		Should we forcefully reload Lua?
-		Set by controls code by pressing 
-		Force button, read by Lua code 
-		and reset after reloading 
+		Set by controls code by pressing
+		Force button, read by Lua code
+		and reset after reloading
 	*/
 	bool forceReload = false;
 
@@ -111,12 +111,35 @@ bool updateLoop() {
 	*/
 	Uint32 lastMouseState = SDL_GetMouseState(nullptr, nullptr);
 
-	while (true) {
+	struct ProjectRenderJob {
+		std::string fileName;
+		std::shared_ptr<RenderJob> job;
 
+		ProjectRenderJob() = delete;
+	};
+
+	std::vector<ProjectRenderJob> projectRenderJobs;
+	int startedProjectRenderJobs = 0;
+	int lastProjectRenderFrame = -1;
+
+	auto startProjectRenderJob = [&](double time, std::string outputFileName = "") {
+		int frame = static_cast<int>(time * projectFramerate);
+		if (outputFileName.empty()) outputFileName = filePath.string() + "." + std::to_string(frame) + ".jpg";
+
+		if (!std::filesystem::is_regular_file(outputFileName)) {
+			auto job = std::make_shared<RenderJob>(projectW, projectH, 1, updateLua(time));
+			job->fileName = outputFileName;
+			rendering::tryPushJob(job);
+			projectRenderJobs.push_back({ outputFileName, job });
+		}
+	};
+
+	while (true) {
+		bool isRendering = !projectRenderJobs.empty() || lastProjectRenderFrame != -1;
 		// Detecting file change
-		if (!ignoreChanges || forceReload) { // Check if cold mode is activated using --cold
+		if ((!ignoreChanges || forceReload) && !isRendering) { // Check if cold mode is activated using --cold, ignore cold if forced, but don't reload during rendering
 			try {
-				if (std::filesystem::last_write_time(filePath) > fileLastModified || forceReload) {
+				if (std::filesystem::last_write_time(filePath) > fileLastModified || forceReload) { // Test if file has been modified or reload was forced
 					try {
 						// Defaults to be optionaly overwritten by Lua
 						projectW = 1980;
@@ -152,23 +175,31 @@ bool updateLoop() {
 				}
 			}
 		}
-		if (wantPreviewJob) {  // If we want a render job we get it
-			spdlog::debug("Requesting a render job for preview");
-			wantPreviewJob = false;
-			try {
-				updatePreview(previewJob, updateLua(time));
-			} catch (const kaguya::LuaException& err) { // Trigger on exceptions inside Lua so the whole program doesn't crash 
-				spdlog::warn("Exception occured while executing update: \n{}", err.what());
-				luaState["update"].setFunction([]() {}); // Reset the update function so it doesn't error every time we try to update preview.
+		if (!isRendering) {
+			if (wantPreviewJob) {  // If we want a render job we get it
+				spdlog::debug("Requesting a render job for preview");
+				wantPreviewJob = false;
+				try {
+					updatePreview(previewJob, updateLua(time));
+				} catch (const kaguya::LuaException& err) { // Trigger on exceptions inside Lua so the whole program doesn't crash 
+					spdlog::warn("Exception occured while executing update: \n{}", err.what());
+					luaState("function update() tasks.fill(1,0,0) end"); // Reset the update function so it doesn't error every time we try to update preview.
+				}
 			}
-		}
-		if (previewJob) { // If we have a render job we test if it's done
-			SDL_BlitSurface(previewJob->surface.get(), nullptr, SDL_GetWindowSurface(previewWindow.get()), nullptr); // Blit finished pixels to preview
+			if (previewJob) { // If we have a render job we test if it's done
+				SDL_BlitSurface(previewJob->surface.get(), nullptr, SDL_GetWindowSurface(previewWindow.get()), nullptr); // Blit finished pixels to preview
+				SDL_UpdateWindowSurface(previewWindow.get());
+				if (previewJob->finished) { // If done then we free it and forget about it
+					spdlog::debug("Preview job finished, freeing");
+					previewJob.reset();
+				}
+			}
+		} else {
+			auto surface = SDL_GetWindowSurface(previewWindow.get());
+			SDL_FillRect(surface, nullptr, SDL_MapRGB(surface->format, 0, 0, 0));
+			SDL_Rect rect{ 0,0,static_cast<int>((double)surface->w * double(lastProjectRenderFrame - projectRenderJobs.size()) / startedProjectRenderJobs),surface->h };
+			SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, 0, 255, 0));
 			SDL_UpdateWindowSurface(previewWindow.get());
-			if (previewJob->finished) { // If done then we free it and forget about it
-				spdlog::debug("Preview job finished, freeing");
-				previewJob.reset();
-			}
 		}
 
 		{ // Render slider window controlls
@@ -216,72 +247,124 @@ bool updateLoop() {
 				return pressed;
 			};
 
-			drawControll(fmt::format(LABEL_TIME, time, projectLength).data(), true);
-			if (drawControll(LABEL_PAUSEPLAY)) { // Pausing a plaing the preview
-				if (plaing) {
-					plaing = false;
-					wantPreviewJob = true; // If we stop plaing, we request a preview job to make sure to render the last frame
-				} else {
-					plaing = true;
+			if (!isRendering) {
+				drawControll(fmt::format(LABEL_TIME, time, projectLength).data(), true);
+				if (drawControll(LABEL_PAUSEPLAY)) { // Pausing a plaing the preview
+					if (plaing) {
+						plaing = false;
+						wantPreviewJob = true; // If we stop plaing, we request a preview job to make sure to render the last frame
+					} else {
+						plaing = true;
+					}
 				}
-			}
-			drawControll(LABEL_RENDERFRAME);
-			drawControll(LABEL_RENDER_PROJECT);
-			forceReload = drawControll(LABEL_FORCERELOAD);
+				if (drawControll(LABEL_RENDERFRAME)) {
+					startProjectRenderJob(time);
+					startedProjectRenderJobs++;
+				}
+				if (drawControll(LABEL_RENDER_PROJECT)) {
+					startedProjectRenderJobs = static_cast<int>(projectLength * projectFramerate);
+					lastProjectRenderFrame = 0;
+				}
+				forceReload = drawControll(LABEL_FORCERELOAD);
 
-			{ // Slider controll
-				// Testing if mouse is over the slider and left mouse button is down
-				if (mouseX >= CONTROLS_PADDING && mouseX < CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING) && mouseY >= CONTROLS_PADDING * 2 + CONTROLS_HEIGHT && mouseY < (CONTROLS_PADDING + CONTROLS_HEIGHT) * 2 && (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0) {
-					double frac = (double(mouseX) - CONTROLS_PADDING) / (double(CONTROLS_COUNT * double(CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING); // Calculate the percentage of the slider before the mouse
-					time = frac * projectLength; // Setting the time based on mouse
-					if (time != lastTime) { // If the time changed we update the preview
+				{ // Slider controll
+					// Testing if mouse is over the slider and left mouse button is down
+					if (mouseX >= CONTROLS_PADDING && mouseX < CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING) && mouseY >= CONTROLS_PADDING * 2 + CONTROLS_HEIGHT && mouseY < (CONTROLS_PADDING + CONTROLS_HEIGHT) * 2 && (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0) {
+						double frac = (double(mouseX) - CONTROLS_PADDING) / (double(CONTROLS_COUNT * double(CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING); // Calculate the percentage of the slider before the mouse
+						time = frac * projectLength; // Setting the time based on mouse
+						if (time != lastTime) { // If the time changed we update the preview
+							if (!previewJob) { // We update the preview only if a job is not active to prevent canceling it and to prevent flashing of preview
+								wantPreviewJob = true;
+							}
+						}
+						wasSliderDown = true;
+						lastTime = time;
+					} else {
+						if (wasSliderDown) { // When the slider is released we update the preview to make sure the last frame is rendered
+							wantPreviewJob = true;
+						}
+						wasSliderDown = false;
+					}
+
+					// Plaing code
+					if (plaing) {
+						auto now = std::chrono::high_resolution_clock::now();
+						double elapsedTime = std::chrono::duration<double>((now - lastPlayFrame)).count();
+						lastPlayFrame = now; // Calculate the difference between last frame and now to increment time by real elapsed time
+						time += elapsedTime;
+						if (time > projectLength) { // If time reaches end we stop plaing
+							time = projectLength;
+							plaing = false;
+							wantPreviewJob = true;
+						}
 						if (!previewJob) { // We update the preview only if a job is not active to prevent canceling it and to prevent flashing of preview
 							wantPreviewJob = true;
 						}
 					}
-					wasSliderDown = true;
-					lastTime = time;
-				} else {
-					if (wasSliderDown) { // When the slider is released we update the preview to make sure the last frame is rendered
-						wantPreviewJob = true;
-					}
-					wasSliderDown = false;
-				}
 
-				// Plaing code
-				if (plaing) {
-					auto now = std::chrono::high_resolution_clock::now();
-					double elapsedTime = std::chrono::duration<double>((now - lastPlayFrame)).count();
-					lastPlayFrame = now; // Calculate the difference between last frame and now to increment time by real elapsed time
-					time += elapsedTime;
-					if (time > projectLength) { // If time reaches end we stop plaing
-						time = projectLength;
-						plaing = false;
-						wantPreviewJob = true;
-					}
-					if (!previewJob) { // We update the preview only if a job is not active to prevent canceling it and to prevent flashing of preview
-						wantPreviewJob = true;
-					}
+					// Drawing the slider
+					fillRect(CONTROLS_PADDING, CONTROLS_PADDING * 2 + CONTROLS_HEIGHT + CONTROLS_HEIGHT / 2 - SLIDER_LINE_WIDTH / 2, (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING, SLIDER_LINE_WIDTH); // Slider line
+					fillRect(static_cast<int>(CONTROLS_PADDING + ((time / projectLength) * ((double)CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING)), CONTROLS_PADDING * 2 + CONTROLS_HEIGHT, SLIDER_HANDLE_WIDTH, CONTROLS_HEIGHT, CONTROL_HOVER_COLOR); // Slider handle
 				}
-
-				// Drawing the slider
-				fillRect(CONTROLS_PADDING, CONTROLS_PADDING * 2 + CONTROLS_HEIGHT + CONTROLS_HEIGHT / 2 - SLIDER_LINE_WIDTH / 2, (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING, SLIDER_LINE_WIDTH); // Slider line
-				fillRect(static_cast<int>(CONTROLS_PADDING + ((time / projectLength) * ((double)CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING)), CONTROLS_PADDING * 2 + CONTROLS_HEIGHT, SLIDER_HANDLE_WIDTH, CONTROLS_HEIGHT, CONTROL_HOVER_COLOR); // Slider handle
+			} else {
+				if (drawControll("Stop")) {
+					for (auto& job : projectRenderJobs) {
+						job.job->canceled = true;
+					}
+					projectRenderJobs.clear();
+					startedProjectRenderJobs = 0;
+					isRendering = false;
+					wantPreviewJob = true;
+				}
 			}
 
-			// Setting the last mouse state
-			lastMouseState = SDL_GetMouseState(nullptr, nullptr);
 			// Presenting the rendered content to slider window
 			SDL_RenderPresent(renderer);
+		}
+		if (lastProjectRenderFrame >= 0) {
+			if (projectRenderJobs.size() < 50) {
+				auto maxframes = static_cast<int>(projectLength * projectFramerate);
+				int frame = lastProjectRenderFrame;
+				auto frames = std::min(lastProjectRenderFrame + 50, maxframes);
 
-			{ // Frame rate limiting
-				auto now = std::chrono::high_resolution_clock::now();
-				double diff = std::chrono::duration<double>(now - lastPlayFrame).count();
-				int sleep = static_cast<int>(((1000.0 / 60.0) - diff * 1000));
-				lastPlayFrame = std::chrono::high_resolution_clock::now(); // Update the last frame time point, used to increment preview time in plaing code and fps limiting. It's set before the delay so the delay is counted in the elapsed time.
-				if (sleep > 0) SDL_Delay(sleep);
+				for (; frame < frames; frame++) {
+					startProjectRenderJob(frame / (double)projectFramerate + (1 / (double)projectFramerate / 2));
+				}
+
+				lastProjectRenderFrame = frame;
+				if (lastProjectRenderFrame >= maxframes) lastProjectRenderFrame = -1;
+			}
+		}
+		if (isRendering) { // Rendering code
+			if (!projectRenderJobs.empty()) {
+				auto eraseIterator = std::remove_if(projectRenderJobs.begin(), projectRenderJobs.end(), [](ProjectRenderJob& job) {
+					if (!job.job) return true;
+					if (job.job->finished.load()) {
+						return true;
+					} else {
+						return false;
+					}
+				});
+				if (eraseIterator != projectRenderJobs.end()) projectRenderJobs.erase(eraseIterator);
 			}
 
+			if (projectRenderJobs.empty() && lastProjectRenderFrame == -1) {
+				startedProjectRenderJobs = 0;
+				wantPreviewJob = true;
+				isRendering = false;
+
+				spdlog::info("Use 'ffmpeg -framerate 30 -i \"{}\" \"{}.mp4\"'", filePath.string() + ".%d.jpg", filePath.string());
+			}
+		}
+
+		// Setting the last mouse state
+		lastMouseState = SDL_GetMouseState(nullptr, nullptr);
+		{ // Frame rate limiting
+			auto now = std::chrono::high_resolution_clock::now();
+			double diff = std::chrono::duration<double>(now - lastPlayFrame).count();
+			int sleep = static_cast<int>(((1000.0 / 60.0) - diff * 1000));
+			lastPlayFrame = std::chrono::high_resolution_clock::now(); // Update the last frame time point, used to increment preview time in plaing code and fps limiting. It's set before the delay so the delay is counted in the elapsed time.
+			if (sleep > 0) SDL_Delay(sleep);
 		}
 	}
 

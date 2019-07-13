@@ -18,6 +18,7 @@ inline int projectH;
 inline int maxPreviewSize;
 inline double previewScale;
 inline double projectLength;
+inline int projectFramerate = 30;
 
 /*
 	This window should contain all controlls, including the time slider,
@@ -38,10 +39,6 @@ struct LuaSurfacePtr {
 		if (!surface) return "<EMPTY LuaSurfacePtr>";
 		if (!*surface) return "<INVALID LuaSurfacePtr>";
 		return "<LuaSurfacePtr: " + std::to_string((std::size_t)(surface->get())) + ">";
-	}
-
-	~LuaSurfacePtr() {
-		if (surface.use_count() == 1) spdlog::debug("Destroyed Lua image {}", ToString());
 	}
 };
 
