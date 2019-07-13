@@ -97,6 +97,13 @@ bool updateLoop() {
 		increment preview time. Also used for framerate limiting.
 	*/
 	std::chrono::high_resolution_clock::time_point lastPlayFrame = std::chrono::high_resolution_clock::now();
+	/* 
+		Should we forcefully reload Lua?
+		Set by controls code by pressing 
+		Force button, read by Lua code 
+		and reset after reloading 
+	*/
+	bool forceReload = false;
 
 	/*
 		Last state of mouse buttons. Used and set by
@@ -107,9 +114,9 @@ bool updateLoop() {
 	while (true) {
 
 		// Detecting file change
-		if (!ignoreChanges) { // Check if cold mode is activated using --cold
+		if (!ignoreChanges || forceReload) { // Check if cold mode is activated using --cold
 			try {
-				if (std::filesystem::last_write_time(filePath) > fileLastModified) {
+				if (std::filesystem::last_write_time(filePath) > fileLastModified || forceReload) {
 					try {
 						// Defaults to be optionaly overwritten by Lua
 						projectW = 1980;
@@ -128,6 +135,8 @@ bool updateLoop() {
 					recalcPreviewScale();
 					// Checking if time is inside the length optionaly set by Lua
 					if (time > projectLength) time = projectLength;
+					// If Lua was forcefully reloaded, reset this value so it isn't reloaded again.
+					forceReload = false;
 				}
 			} catch (const std::filesystem::filesystem_error& err) { // Trigger on file reading error to inform user. Can potetialy happen randomly.
 				spdlog::warn("Exception '{}' occured while reading specified file", err.what());
@@ -218,12 +227,12 @@ bool updateLoop() {
 			}
 			drawControll(LABEL_RENDERFRAME);
 			drawControll(LABEL_RENDER_PROJECT);
-			drawControll(LABEL_FORCERELOAD);
+			forceReload = drawControll(LABEL_FORCERELOAD);
 
 			{ // Slider controll
 				// Testing if mouse is over the slider and left mouse button is down
 				if (mouseX >= CONTROLS_PADDING && mouseX < CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING) && mouseY >= CONTROLS_PADDING * 2 + CONTROLS_HEIGHT && mouseY < (CONTROLS_PADDING + CONTROLS_HEIGHT) * 2 && (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0) {
-					double frac = (double(mouseX) - CONTROLS_PADDING) / (double(CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING); // Calculate the percentage of the slider before the mouse
+					double frac = (double(mouseX) - CONTROLS_PADDING) / (double(CONTROLS_COUNT * double(CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING); // Calculate the percentage of the slider before the mouse
 					time = frac * projectLength; // Setting the time based on mouse
 					if (time != lastTime) { // If the time changed we update the preview
 						if (!previewJob) { // We update the preview only if a job is not active to prevent canceling it and to prevent flashing of preview
@@ -257,7 +266,7 @@ bool updateLoop() {
 
 				// Drawing the slider
 				fillRect(CONTROLS_PADDING, CONTROLS_PADDING * 2 + CONTROLS_HEIGHT + CONTROLS_HEIGHT / 2 - SLIDER_LINE_WIDTH / 2, (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING, SLIDER_LINE_WIDTH); // Slider line
-				fillRect(static_cast<int>(CONTROLS_PADDING + ((time / projectLength) * (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING)), CONTROLS_PADDING * 2 + CONTROLS_HEIGHT, SLIDER_HANDLE_WIDTH, CONTROLS_HEIGHT, CONTROL_HOVER_COLOR); // Slider handle
+				fillRect(static_cast<int>(CONTROLS_PADDING + ((time / projectLength) * ((double)CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING)), CONTROLS_PADDING * 2 + CONTROLS_HEIGHT, SLIDER_HANDLE_WIDTH, CONTROLS_HEIGHT, CONTROL_HOVER_COLOR); // Slider handle
 			}
 
 			// Setting the last mouse state
