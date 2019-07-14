@@ -20,7 +20,7 @@ void updatePreview(std::shared_ptr<RenderJob>& previewJob, std::vector<std::uniq
 		previewJob.reset();
 	}
 	previewJob = std::make_shared<RenderJob>(projectW, projectH, previewScale, std::move(tasks));
-	rendering::tryPushJob(previewJob);
+	rendering::pushJob(previewJob);
 }
 
 bool updateLoop() {
@@ -119,11 +119,32 @@ bool updateLoop() {
 
 		ProjectRenderJob() = delete;
 	};
-
+	/*
+		Jobs rendering the project (NOT preview), added by
+		job creatiion code, removed by rendering code
+	*/
 	std::vector<ProjectRenderJob> projectRenderJobs;
+	/*
+		How many project render jobs will be started,
+		used for rendering the progress bar, set by
+		controls code (specificaly by buttons), reset
+		by rendering code and stop button in controls
+		code. Read by preview code if rendering.
+	*/
 	int startedProjectRenderJobs = 0;
+	/*
+		What was the last frame added to the
+		project render jobs vector, used by 
+		job creation code to prevent duplication
+		of frames. If set to 0 (by controls code,
+		render project button) the job creation
+		code will start and increment until all
+		frames are rendered then set to -1.
+	*/
 	int lastProjectRenderFrame = nowindow ? 0 : -1;
-
+	/*
+		Starts a render job for frame at time, automaticaly calculates the frame number and file name.
+	*/
 	auto startProjectRenderJob = [&](double time, std::string outputFileName = "") {
 		int frame = static_cast<int>(time * projectFramerate);
 		if (outputFileName.empty()) outputFileName = filePath.string() + "." + std::to_string(frame) + ".jpg";
@@ -131,16 +152,22 @@ bool updateLoop() {
 		if (!std::filesystem::is_regular_file(outputFileName)) {
 			auto job = std::make_shared<RenderJob>(projectW, projectH, 1, updateLua(time));
 			job->fileName = outputFileName;
-			rendering::tryPushJob(job);
+			rendering::pushJob(job);
 			projectRenderJobs.push_back({ outputFileName, job });
 		}
 	};
-
+	/*
+		If this is the first loop.
+	*/
 	bool firstTime = true;
 
 	while (true) {
 		bool isRendering = !projectRenderJobs.empty() || lastProjectRenderFrame != -1;
-		// Detecting file change
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//																										 //
+		//										File change detection											 //
+		//																										 //
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
 		if (((!ignoreChanges || forceReload) && !isRendering) || firstTime) { // Check if cold mode is activated using --cold, ignore cold if forced, but don't reload during rendering
 			try {
 				if (std::filesystem::last_write_time(filePath) > fileLastModified || forceReload) { // Test if file has been modified or reload was forced
@@ -170,6 +197,12 @@ bool updateLoop() {
 			}
 			firstTime = false;
 		}
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//																										 //
+		//										Event polling code												 //
+		//																										 //
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 		if (!nowindow) {
 			SDL_Event event; // Event to store the polled events
 			// Polling and reacting to SDL events
@@ -182,6 +215,12 @@ bool updateLoop() {
 			}
 
 			if (!isRendering) {
+				///////////////////////////////////////////////////////////////////////////////////////////////////////////
+				//																										 //
+				//									Render job requesting code											 //
+				//																										 //
+				///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 				if (wantPreviewJob) {  // If we want a render job we get it
 					spdlog::debug("Requesting a render job for preview");
 					wantPreviewJob = false;
@@ -192,6 +231,11 @@ bool updateLoop() {
 						luaState("function update() tasks.fill(1,0,0) end"); // Reset the update function so it doesn't error every time we try to update preview.
 					}
 				}
+				///////////////////////////////////////////////////////////////////////////////////////////////////////////
+				//																										 //
+				//										Preview blitting code											 //
+				//																										 //
+				///////////////////////////////////////////////////////////////////////////////////////////////////////////
 				if (previewJob) { // If we have a render job we test if it's done
 					SDL_BlitSurface(previewJob->surface.get(), nullptr, SDL_GetWindowSurface(previewWindow.get()), nullptr); // Blit finished pixels to preview
 					SDL_UpdateWindowSurface(previewWindow.get());
@@ -201,14 +245,24 @@ bool updateLoop() {
 					}
 				}
 			} else {
+				///////////////////////////////////////////////////////////////////////////////////////////////////////////
+				//																										 //
+				//									Progress bar rendering												 //
+				//																										 //
+				///////////////////////////////////////////////////////////////////////////////////////////////////////////
 				auto surface = SDL_GetWindowSurface(previewWindow.get());
 				SDL_FillRect(surface, nullptr, SDL_MapRGB(surface->format, 0, 0, 0));
-				SDL_Rect rect{ 0,0,static_cast<int>((double)surface->w * double(lastProjectRenderFrame - projectRenderJobs.size()) / startedProjectRenderJobs),surface->h };
+				SDL_Rect rect{ 0,0,static_cast<int>((double)surface->w * ((double)lastProjectRenderFrame - projectRenderJobs.size()) / startedProjectRenderJobs),surface->h };
 				SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, 0, 255, 0));
 				SDL_UpdateWindowSurface(previewWindow.get());
 			}
 
-			{ // Render slider window controlls
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//																										 //
+			//								Rendering slider window controlls										 //
+			//																										 //
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			{
 				auto renderer = sliderWindowRenderer.get();
 
 				// Drawing background
@@ -272,7 +326,11 @@ bool updateLoop() {
 						lastProjectRenderFrame = 0;
 					}
 					forceReload = drawControll(LABEL_FORCERELOAD);
-
+					///////////////////////////////////////////////////////////////////////////////////////////////////////////
+					//																										 //
+					//										Rendering slider												 //
+					//																										 //
+					///////////////////////////////////////////////////////////////////////////////////////////////////////////
 					{ // Slider controll
 						// Testing if mouse is over the slider and left mouse button is down
 						if (mouseX >= CONTROLS_PADDING && mouseX < CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING) && mouseY >= CONTROLS_PADDING * 2 + CONTROLS_HEIGHT && mouseY < (CONTROLS_PADDING + CONTROLS_HEIGHT) * 2 && (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) > 0) {
@@ -292,7 +350,11 @@ bool updateLoop() {
 							wasSliderDown = false;
 						}
 
-						// Plaing code
+						///////////////////////////////////////////////////////////////////////////////////////////////////////////
+						//																										 //
+						//											Playing code												 //
+						//																										 //
+						///////////////////////////////////////////////////////////////////////////////////////////////////////////
 						if (plaing) {
 							auto now = std::chrono::high_resolution_clock::now();
 							double elapsedTime = std::chrono::duration<double>((now - lastPlayFrame)).count();
@@ -310,17 +372,23 @@ bool updateLoop() {
 
 						// Drawing the slider
 						fillRect(CONTROLS_PADDING, CONTROLS_PADDING * 2 + CONTROLS_HEIGHT + CONTROLS_HEIGHT / 2 - SLIDER_LINE_WIDTH / 2, (CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING, SLIDER_LINE_WIDTH); // Slider line
-						fillRect(static_cast<int>(CONTROLS_PADDING + ((time / projectLength) * ((double)CONTROLS_COUNT * (CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING)), CONTROLS_PADDING * 2 + CONTROLS_HEIGHT, SLIDER_HANDLE_WIDTH, CONTROLS_HEIGHT, CONTROL_HOVER_COLOR); // Slider handle
+						fillRect(static_cast<int>(CONTROLS_PADDING + ((time / projectLength) * ((double)CONTROLS_COUNT * ((double)CONTROLS_WIDTH + CONTROLS_PADDING)) - CONTROLS_PADDING)), CONTROLS_PADDING * 2 + CONTROLS_HEIGHT, SLIDER_HANDLE_WIDTH, CONTROLS_HEIGHT, CONTROL_HOVER_COLOR); // Slider handle
 					}
-				} else {
+				} else { // If we are rendering draw a stop button
+					///////////////////////////////////////////////////////////////////////////////////////////////////////////
+					//																										 //
+					//											Stop button													 //
+					//																										 //
+					///////////////////////////////////////////////////////////////////////////////////////////////////////////
 					if (drawControll("Stop")) {
-						for (auto& job : projectRenderJobs) {
+						for (auto& job : projectRenderJobs) { // Cancel all jobs
 							job.job->canceled = true;
 						}
-						projectRenderJobs.clear();
-						startedProjectRenderJobs = 0;
+						projectRenderJobs.clear(); // Delete job references
+						startedProjectRenderJobs = 0; // Reset counter
+						lastProjectRenderFrame = -1; // Disable job adding
 						isRendering = false;
-						wantPreviewJob = true;
+						wantPreviewJob = true; // Request a preview job, to rewrite the progress bar
 					}
 				}
 
@@ -328,22 +396,33 @@ bool updateLoop() {
 				SDL_RenderPresent(renderer);
 			}
 		}
-		if (lastProjectRenderFrame >= 0) {
-			if (projectRenderJobs.size() < MAX_RENDER_JOBS) {
-				auto maxframes = static_cast<int>(projectLength * projectFramerate);
-				int frame = lastProjectRenderFrame;
-				auto frames = std::min(lastProjectRenderFrame + static_cast<int>(MAX_RENDER_JOBS), maxframes);
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//																										 //
+		//										  Job adding code												 //
+		//																										 //
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		if (lastProjectRenderFrame >= 0) { // If frame adding active
+			if (projectRenderJobs.size() < MAX_RENDER_JOBS) { // Test if more job are needed
+				auto maxframes = static_cast<int>(projectLength * projectFramerate); // Calculate amount of frames in the project
+				int frame = lastProjectRenderFrame; // Current frame
+				auto frames = std::min(lastProjectRenderFrame + static_cast<int>(MAX_RENDER_JOBS), maxframes); // End frame
 
 				for (; frame < frames; frame++) {
-					startProjectRenderJob(frame / (double)projectFramerate + (1 / (double)projectFramerate / 2));
+					startProjectRenderJob(frame / (double)projectFramerate + (1 / (double)projectFramerate / 2)); // Start jobs
 				}
-
+				// Save last frame
 				lastProjectRenderFrame = frame;
+				// If last frame is the last frame disable adding
 				if (lastProjectRenderFrame >= maxframes) lastProjectRenderFrame = -1;
 			}
 		}
-		if (isRendering) { // Rendering code
-			if (!projectRenderJobs.empty()) {
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//																										 //
+		//										  Rendering code												 //
+		//																										 //
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		if (isRendering) {
+			if (!projectRenderJobs.empty()) { // Check all jobs, remove reference if job finished
 				auto eraseIterator = std::remove_if(projectRenderJobs.begin(), projectRenderJobs.end(), [](ProjectRenderJob& job) {
 					if (!job.job) return true;
 					if (job.job->finished.load()) {
@@ -355,14 +434,14 @@ bool updateLoop() {
 				if (eraseIterator != projectRenderJobs.end()) projectRenderJobs.erase(eraseIterator);
 			}
 
-			if (projectRenderJobs.empty() && lastProjectRenderFrame == -1) {
-				startedProjectRenderJobs = 0;
-				wantPreviewJob = true;
+			if (projectRenderJobs.empty() && lastProjectRenderFrame == -1) { // If we are not rendering anymore
+				startedProjectRenderJobs = 0; // Reset counter
+				wantPreviewJob = true; // Request a preview job to overwrite the progress bar
 				isRendering = false;
 
-				spdlog::info("Use 'ffmpeg -framerate 30 -i \"{}\" \"{}.mp4\"'", filePath.string() + ".%d.jpg", filePath.string());
+				spdlog::info("Use 'ffmpeg -framerate 30 -i \"{}\" \"{}.mp4\"'", filePath.string() + ".%d.jpg", filePath.string()); // Hint to combine the images to a video
 
-				if (nowindow) break;
+				if (nowindow) break; // If we are in nowindow mode, terminate the program
 			}
 		}
 		if (!nowindow) {

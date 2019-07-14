@@ -19,6 +19,13 @@ inline int maxPreviewSize;
 inline double previewScale;
 inline double projectLength;
 inline int projectFramerate = 30;
+/*
+	If we are in nowindow mode,
+	caused by --no_window flag,
+	disables all windows and
+	instantly starts rendering
+	the project, then terminates.
+*/
 inline bool nowindow;
 
 /*

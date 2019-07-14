@@ -35,7 +35,7 @@ namespace rendering {
 		using the assign operator with a defaultly constructed
 		job.
 	*/
-	void tryPushJob(std::shared_ptr<RenderJob> targetJob) {
+	void pushJob(std::shared_ptr<RenderJob> targetJob) {
 		std::lock_guard<std::mutex> guard(renderJobsMutex);
 		renderJobs.push(targetJob);
 		jobNotification.notify_one();

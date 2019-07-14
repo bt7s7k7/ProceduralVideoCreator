@@ -26,7 +26,7 @@ struct RenderJob {
 };
 
 namespace rendering {
-	void tryPushJob(std::shared_ptr<RenderJob> targetJob);
+	void pushJob(std::shared_ptr<RenderJob> targetJob);
 	void setupThreadSwarm();
 	void endThreadSwarm();
 	extern std::mutex renderJobsMutex;
