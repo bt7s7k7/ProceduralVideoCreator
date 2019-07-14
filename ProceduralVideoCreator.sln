@@ -7,6 +7,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProceduralVideoCreator", "P
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D2A128EE-5A80-44B4-9D9A-C4D111C82252}"
 	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
 		ExampleScripts\test.lua = ExampleScripts\test.lua
 	EndProjectSection
 EndProject
