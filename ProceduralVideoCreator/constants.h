@@ -1,7 +1,7 @@
 #pragma once
 #include "pch.h"
 
-constexpr char PROGRAM_NAME[] = "ProceduralVideoCreator";
+constexpr char PROGRAM_NAME[] = "pvc";
 
 constexpr char FILE_ARG_NAME[] = "file";
 constexpr char FILE_ARG_DEFINITION[] = "f,file";
